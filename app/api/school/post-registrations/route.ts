@@ -73,6 +73,9 @@ export async function PATCH(req: NextRequest) {
       if (typeof update.religious.term2 === 'string') data.religiousTerm2 = update.religious.term2;
       if (typeof update.religious.term3 === 'string') data.religiousTerm3 = update.religious.term3;
     }
+    // Handle new dynamic format
+    if (update.caScores) data.caScores = update.caScores;
+    if (Array.isArray(update.studentSubjects)) data.studentSubjects = update.studentSubjects;
 
     const result = await prisma.postRegistration.updateMany({
       where: { id, schoolId: decoded.schoolId },
@@ -159,10 +162,14 @@ interface RegistrationData {
   gender: string;
   schoolType: string;
   passport: string | null;
-  english: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string };
-  arithmetic: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string };
-  general: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string };
-  religious: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string; type: string };
+  // Legacy fixed subject fields (optional for backward compatibility)
+  english?: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string };
+  arithmetic?: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string };
+  general?: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string };
+  religious?: { term1?: string; term2?: string; term3?: string; year1?: string; year2?: string; year3?: string; type?: string };
+  // New dynamic format
+  caScores?: Record<string, { year1?: string; year2?: string; year3?: string }>;
+  studentSubjects?: string[];
   isLateRegistration?: boolean;
   year?: string;
   prcd?: number;
@@ -325,34 +332,69 @@ export async function POST(req: NextRequest) {
     }
     
     // Prepare data for bulk insert with pre-generated accCodes
-    const studentData = registrations.map((reg: RegistrationData, index: number) => ({
-      accCode: accCodes[index],
-      studentNumber: reg.studentNumber,
-      firstname: reg.firstname,
-      othername: reg.othername || '',
-      lastname: reg.lastname,
-      dateOfBirth: reg.dateOfBirth ? new Date(reg.dateOfBirth) : null,
-      gender: reg.gender,
-      schoolType: reg.schoolType,
-      passport: reg.passport,
-      englishTerm1: (reg.english as any).term1 || (reg.english as any).year1 || '-',
-      englishTerm2: (reg.english as any).term2 || (reg.english as any).year2 || '-',
-      englishTerm3: (reg.english as any).term3 || (reg.english as any).year3 || '-',
-      arithmeticTerm1: (reg.arithmetic as any).term1 || (reg.arithmetic as any).year1 || '-',
-      arithmeticTerm2: (reg.arithmetic as any).term2 || (reg.arithmetic as any).year2 || '-',
-      arithmeticTerm3: (reg.arithmetic as any).term3 || (reg.arithmetic as any).year3 || '-',
-      generalTerm1: (reg.general as any).term1 || (reg.general as any).year1 || '-',
-      generalTerm2: (reg.general as any).term2 || (reg.general as any).year2 || '-',
-      generalTerm3: (reg.general as any).term3 || (reg.general as any).year3 || '-',
-      religiousType: reg.religious.type || '',
-      religiousTerm1: (reg.religious as any).term1 || (reg.religious as any).year1 || '-',
-      religiousTerm2: (reg.religious as any).term2 || (reg.religious as any).year2 || '-',
-      religiousTerm3: (reg.religious as any).term3 || (reg.religious as any).year3 || '-',
-      lateRegistration: reg.isLateRegistration || false,
-      year: reg.year || '2025/2026',
-      prcd: reg.prcd || 1,
-      schoolId: decoded.schoolId,
-    }));
+    // Handle both new dynamic caScores format and legacy fixed subject format
+    const studentData = registrations.map((reg: RegistrationData, index: number) => {
+      // Extract CA scores - prioritize new caScores format, fall back to legacy fields
+      const caScores = (reg as any).caScores || {};
+      const studentSubjects = (reg as any).studentSubjects || [];
+      
+      // Get English scores (from caScores.ENG or legacy english field)
+      const engScores = caScores['ENG'] || reg.english || {};
+      const englishTerm1 = engScores.term1 || engScores.year1 || '-';
+      const englishTerm2 = engScores.term2 || engScores.year2 || '-';
+      const englishTerm3 = engScores.term3 || engScores.year3 || '-';
+      
+      // Get Math/Arithmetic scores (from caScores.MTH or legacy arithmetic field)
+      const mathScores = caScores['MTH'] || reg.arithmetic || {};
+      const arithmeticTerm1 = mathScores.term1 || mathScores.year1 || '-';
+      const arithmeticTerm2 = mathScores.term2 || mathScores.year2 || '-';
+      const arithmeticTerm3 = mathScores.term3 || mathScores.year3 || '-';
+      
+      // Get General/Basic Science scores (from caScores.BST or legacy general field)
+      const generalScores = caScores['BST'] || reg.general || {};
+      const generalTerm1 = generalScores.term1 || generalScores.year1 || '-';
+      const generalTerm2 = generalScores.term2 || generalScores.year2 || '-';
+      const generalTerm3 = generalScores.term3 || generalScores.year3 || '-';
+      
+      // Get Religious Studies scores (from caScores.RGS or legacy religious field)
+      const religiousScores = caScores['RGS'] || reg.religious || {};
+      const religiousType = reg.religious?.type || '';
+      const religiousTerm1 = religiousScores.term1 || religiousScores.year1 || '-';
+      const religiousTerm2 = religiousScores.term2 || religiousScores.year2 || '-';
+      const religiousTerm3 = religiousScores.term3 || religiousScores.year3 || '-';
+      
+      return {
+        accCode: accCodes[index],
+        studentNumber: reg.studentNumber,
+        firstname: reg.firstname,
+        othername: reg.othername || '',
+        lastname: reg.lastname,
+        dateOfBirth: reg.dateOfBirth ? new Date(reg.dateOfBirth) : null,
+        gender: reg.gender,
+        schoolType: reg.schoolType,
+        passport: reg.passport,
+        englishTerm1,
+        englishTerm2,
+        englishTerm3,
+        arithmeticTerm1,
+        arithmeticTerm2,
+        arithmeticTerm3,
+        generalTerm1,
+        generalTerm2,
+        generalTerm3,
+        religiousType,
+        religiousTerm1,
+        religiousTerm2,
+        religiousTerm3,
+        lateRegistration: reg.isLateRegistration || false,
+        year: reg.year || '2025/2026',
+        prcd: reg.prcd || 1,
+        schoolId: decoded.schoolId,
+        // Store the new dynamic format for future use
+        studentSubjects: studentSubjects,
+        caScores: caScores,
+      };
+    });
 
     // Debug: Log first mapped student data to verify continuous assessment mapping
     if (studentData.length > 0) {

@@ -93,7 +93,6 @@ const SUBJECTS = [
   { code: "CCA", name: "Cultural and Creative Arts" },
   { code: "FRE", name: "French" },
   { code: "NVS", name: "National Values" },
-  { code: "LLG", name: "Local Language" },
   { code: "PVS", name: "Pre Vocational Studies" },
   { code: "BUS", name: "Business Studies" },
 ];
@@ -195,13 +194,25 @@ const Validation = () => {
           return;
         }
 
+        const parseCAScores = (caScores: any) => {
+          if (!caScores) return {};
+          if (typeof caScores === 'string') {
+            try {
+              return JSON.parse(caScores);
+            } catch {
+              return {};
+            }
+          }
+          return caScores;
+        };
+
         const studentRegs: Registration[] = (studentData.registrations || []).map((r: any) => ({
           ...r,
           othername: r.othername ?? "",
           religiousType: r.religiousType ?? "",
           source: "student" as const,
           studentSubjects: r.studentSubjects || [],
-          caScores: r.caScores || {},
+          caScores: parseCAScores(r.caScores),
         }));
 
         const postRegs: Registration[] = (postData.registrations || []).map((r: any) => ({
@@ -210,7 +221,7 @@ const Validation = () => {
           religiousType: r.religiousType ?? "",
           source: "post" as const,
           studentSubjects: r.studentSubjects || [],
-          caScores: r.caScores || {},
+          caScores: parseCAScores(r.caScores),
         }));
 
         const combined = [...studentRegs, ...postRegs].sort((a, b) =>
@@ -400,7 +411,7 @@ const Validation = () => {
     let currentY = pageHeight - margin;
 
     // Line 1: Ministry header
-    centerText('MINISTRY OF SECONDARY SCHOOL EDUCATION', 14, currentY, boldFont);
+    centerText('MINISTRY OF SECONDARY EDUCATION', 14, currentY, boldFont);
     currentY -= 25;
 
     // Line 2: LGA and School information
@@ -676,7 +687,7 @@ const Validation = () => {
       // Column widths for 12 subjects × 3 years = 36 score columns + student info
       const colSN = 20;
       const colExamNo = 50;
-      const colNames = 80;
+      const colNames = 120;
       const colSex = 20;
       const infoWidth = colSN + colExamNo + colNames + colSex;
       const remainingWidth = tableWidth - infoWidth;
@@ -812,7 +823,7 @@ const Validation = () => {
           page.drawText(text, { x: x + xOffset, y, size, font: timesRomanFont });
         };
         
-        const fullName = `${student.lastname.toUpperCase()} ${student.firstname.toUpperCase()}`;
+        const fullName = `${student.lastname.toUpperCase()} ${(student.othername || "").toUpperCase()} ${student.firstname.toUpperCase()}`;
         const caScores = student.caScores || {};
         
         let dataX = margin;
@@ -1286,88 +1297,64 @@ const Validation = () => {
       const pdfDoc = await PDFDocument.create();
       const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
       const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-      const sortedRegs = [...registrations].sort((a, b) =>
-        a.studentNumber.localeCompare(b.studentNumber, undefined, { numeric: true, sensitivity: 'base' })
-      );
 
-      // Page dimensions (Landscape for more columns)
-      const pageWidth = 842;
-      const pageHeight = 595;
-      const margin = 30;
+      // Get unique subjects offered by the school
+      const schoolSubjectCodes = [...new Set(
+        registrations.flatMap(r => r.studentSubjects || [])
+      )];
+      const schoolSubjects = SUBJECTS.filter(s => schoolSubjectCodes.includes(s.code));
+
+      // Page dimensions (Portrait)
+      const pageWidth = 595;
+      const pageHeight = 842;
+      const margin = 40;
       const tableWidth = pageWidth - 2 * margin;
-      
-      // Column widths
-      const colSN = 30;
-      const colExamNo = 70;
-      const colNames = 140;
-      const colSex = 30;
-      const remainingWidth = tableWidth - colSN - colExamNo - colNames - colSex;
-      const colSubject = remainingWidth / SUBJECTS.length; // Dynamic width per subject
 
-      const rowHeight = 18;
-      const headerHeight = 25;
-      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      const page = pdfDoc.addPage([pageWidth, pageHeight]);
       
       let currentY = drawStandardHeader(page, timesRomanBoldFont, timesRomanFont, pageWidth, pageHeight, margin);
 
-      const checkNewPage = () => {
-        if (currentY < margin + rowHeight) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          currentY = drawStandardHeader(page, timesRomanBoldFont, timesRomanFont, pageWidth, pageHeight, margin);
-          drawTableHeader();
-        }
-      };
+      // Title
+      currentY -= 20;
+      page.drawText('SUBJECTS OFFERED BY SCHOOL', {
+        x: margin,
+        y: currentY,
+        size: 14,
+        font: timesRomanBoldFont,
+      });
+      currentY -= 30;
 
-      const drawTableHeader = () => {
-        page.drawRectangle({
-          x: margin,
-          y: currentY - headerHeight,
-          width: tableWidth,
-          height: headerHeight,
-          color: rgb(0.95, 0.95, 0.95),
-          borderColor: rgb(0, 0, 0),
-          borderWidth: 1,
-        });
+      // Column widths
+      const colSN = 40;
+      const colCode = 80;
+      const colName = tableWidth - colSN - colCode;
+      const rowHeight = 25;
+      const headerHeight = 30;
 
-        // Draw column borders
-        let xPos = margin;
-        const columns = [colSN, colExamNo, colNames, colSex, ...SUBJECTS.map(() => colSubject)];
-        columns.forEach(colWidth => {
-          xPos += colWidth;
-          page.drawLine({
-            start: { x: xPos, y: currentY },
-            end: { x: xPos, y: currentY - headerHeight },
-            thickness: 1,
-          });
-        });
+      // Draw table header
+      page.drawRectangle({
+        x: margin,
+        y: currentY - headerHeight,
+        width: tableWidth,
+        height: headerHeight,
+        color: rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1,
+      });
 
-        // Header text
-        let headerX = margin + 3;
-        const fontSize = 6;
-        const headers = ['S/N', 'EXAM NO', 'NAMES', 'SEX', ...SUBJECTS.map(s => s.code)];
-        const columnWidths = [colSN, colExamNo, colNames, colSex, ...SUBJECTS.map(() => colSubject)];
-        
-        headers.forEach((header, i) => {
-          const textWidth = timesRomanBoldFont.widthOfTextAtSize(header, fontSize);
-          const xOffset = (columnWidths[i] - textWidth) / 2;
-          page.drawText(header, {
-            x: headerX + xOffset,
-            y: currentY - 17,
-            size: fontSize,
-            font: timesRomanBoldFont,
-          });
-          headerX += columnWidths[i];
-        });
+      // Header column borders
+      page.drawLine({ start: { x: margin + colSN, y: currentY }, end: { x: margin + colSN, y: currentY - headerHeight }, thickness: 1 });
+      page.drawLine({ start: { x: margin + colSN + colCode, y: currentY }, end: { x: margin + colSN + colCode, y: currentY - headerHeight }, thickness: 1 });
 
-        currentY -= headerHeight;
-      };
+      // Header text
+      page.drawText('S/N', { x: margin + 10, y: currentY - 20, size: 10, font: timesRomanBoldFont });
+      page.drawText('CODE', { x: margin + colSN + 20, y: currentY - 20, size: 10, font: timesRomanBoldFont });
+      page.drawText('SUBJECT NAME', { x: margin + colSN + colCode + 10, y: currentY - 20, size: 10, font: timesRomanBoldFont });
 
-      drawTableHeader();
+      currentY -= headerHeight;
 
-      // Draw table rows
-      sortedRegs.forEach((student, index) => {
-        checkNewPage();
-
+      // Draw subject rows
+      schoolSubjects.forEach((subject, index) => {
         if (index % 2 === 0) {
           page.drawRectangle({
             x: margin,
@@ -1387,82 +1374,25 @@ const Validation = () => {
           borderWidth: 1,
         });
 
-        // Draw column borders
-        let xPos = margin;
-        const rowColumns = [colSN, colExamNo, colNames, colSex, ...SUBJECTS.map(() => colSubject)];
-        rowColumns.forEach(colWidth => {
-          xPos += colWidth;
-          page.drawLine({
-            start: { x: xPos, y: currentY },
-            end: { x: xPos, y: currentY - rowHeight },
-            thickness: 1,
-          });
-        });
-        
-        const truncateText = (text: string, maxWidth: number, fontSize: number) => {
-          let displayText = text;
-          let textWidth = timesRomanFont.widthOfTextAtSize(displayText, fontSize);
-          while (textWidth > maxWidth && displayText.length > 0) {
-            displayText = displayText.slice(0, -1);
-            textWidth = timesRomanFont.widthOfTextAtSize(displayText + '..', fontSize);
-          }
-          if (displayText !== text && displayText.length > 0) displayText += '..';
-          return displayText;
-        };
-        
-        const drawCenteredText = (text: string, x: number, colWidth: number, y: number, size: number, font = timesRomanFont) => {
-          const textWidth = font.widthOfTextAtSize(text, size);
-          const xOffset = (colWidth - textWidth) / 2;
-          page.drawText(text, { x: x + xOffset, y, size, font });
-        };
-        
-        const fullName = `${student.lastname.toUpperCase()} ${(student.othername || "").toUpperCase()} ${student.firstname.toUpperCase()}`;
-        const studentSubjectCodes = student.studentSubjects || [];
-        
-        let dataX = margin;
-        // S/N
-        drawCenteredText(String(index + 1), dataX, colSN, currentY - 12, 7);
-        dataX += colSN;
-        // Exam No
-        drawCenteredText(student.studentNumber, dataX, colExamNo, currentY - 12, 7);
-        dataX += colExamNo;
-        // Names
-        page.drawText(truncateText(fullName, colNames - 4, 6), { x: dataX + 2, y: currentY - 12, size: 6, font: timesRomanFont });
-        dataX += colNames;
-        // Sex
-        drawCenteredText(student.gender.charAt(0).toUpperCase(), dataX, colSex, currentY - 12, 7);
-        dataX += colSex;
-        
-        // Subject columns - mark with X if student is offering, - if not
-        SUBJECTS.forEach(subject => {
-          const isOffering = studentSubjectCodes.includes(subject.code);
-          drawCenteredText(isOffering ? 'X' : '-', dataX, colSubject, currentY - 12, 8, timesRomanBoldFont);
-          dataX += colSubject;
-        });
+        // Column borders
+        page.drawLine({ start: { x: margin + colSN, y: currentY }, end: { x: margin + colSN, y: currentY - rowHeight }, thickness: 1 });
+        page.drawLine({ start: { x: margin + colSN + colCode, y: currentY }, end: { x: margin + colSN + colCode, y: currentY - rowHeight }, thickness: 1 });
+
+        // Row data
+        page.drawText(String(index + 1), { x: margin + 15, y: currentY - 17, size: 10, font: timesRomanFont });
+        page.drawText(subject.code, { x: margin + colSN + 20, y: currentY - 17, size: 10, font: timesRomanBoldFont });
+        page.drawText(subject.name, { x: margin + colSN + colCode + 10, y: currentY - 17, size: 10, font: timesRomanFont });
 
         currentY -= rowHeight;
       });
 
-      // Add subject legend at the bottom
-      const legendY = margin + 60;
-      page.drawText('SUBJECT KEY:', { x: margin, y: legendY, size: 8, font: timesRomanBoldFont });
-      
-      let legendX = margin;
-      let legendLineY = legendY - 12;
-      const legendColWidth = (tableWidth) / 4; // 4 columns for the legend
-      
-      SUBJECTS.forEach((subject, index) => {
-        const col = index % 4;
-        const row = Math.floor(index / 4);
-        const x = margin + col * legendColWidth;
-        const y = legendLineY - (row * 12);
-        
-        page.drawText(`${subject.code} = ${subject.name}`, {
-          x,
-          y,
-          size: 7,
-          font: timesRomanFont,
-        });
+      // Total subjects count
+      currentY -= 20;
+      page.drawText(`Total Subjects: ${schoolSubjects.length}`, {
+        x: margin,
+        y: currentY,
+        size: 11,
+        font: timesRomanBoldFont,
       });
 
       const pdfBytes = await pdfDoc.save();
@@ -1470,7 +1400,7 @@ const Validation = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `student-subjects-${authenticatedSchool.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `school-subjects-${authenticatedSchool.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1788,7 +1718,7 @@ const Validation = () => {
                                   <SelectItem value="name-no-dob">Print Student Names List</SelectItem>
                                   <SelectItem value="ca">Print Continuous Assessment Scores</SelectItem>
                                   <SelectItem value="photo">Print Student Photos</SelectItem>
-                                  <SelectItem value="subjects">Print Student Subjects</SelectItem>
+                                  <SelectItem value="subjects">Print Subjects</SelectItem>
                                 </SelectContent>
                               </Select>
                               <Button 

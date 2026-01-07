@@ -169,7 +169,7 @@ const PrimaryResult = () => {
         <div class="center">
           <div class="title1">FEDERAL REPUBLIC OF NIGERIA</div>
           <div class="logoWrap"><img class="logo" src="${logoUrl}" alt="Logo" /></div>
-          <div class="title2">Ministry Of Secondary School Education</div>
+          <div class="title2">Ministry of secondary education</div>
           <div class="subtitle">Cognitive/Placement Certification Result</div>
         </div>
 
@@ -231,7 +231,7 @@ const PrimaryResult = () => {
         </div>
 
         <div class="footer">
-          <div>Ministry Of Secondary School Education</div>
+          <div>Ministry of secondary education</div>
         </div>
       </div>
     </div>

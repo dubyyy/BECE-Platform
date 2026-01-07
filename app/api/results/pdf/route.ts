@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Ministry title
-    centerText('Ministry Of Secondary School Education', 11, currentY, bold);
+    centerText('Ministry of secondary education', 11, currentY, bold);
     currentY -= 15;
     centerText('Cognitive/Placement Certification Result', 10, currentY, font);
     currentY -= 25;
@@ -467,7 +467,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    centerText('Ministry Of Secondary School Education -', 9, footerY + 2, font);
+    centerText('Ministry of secondary education -', 9, footerY + 2, font);
     centerText('Powered by Ventud Limited', 8, footerY - 10, font);
 
     // Save PDF

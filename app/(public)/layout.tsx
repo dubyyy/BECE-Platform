@@ -20,8 +20,8 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ministry Of Secondary School Education",
-  description: "Official portal for the Delta State Government Ministry Of Secondary School Education - BECE Result Verification and School Administration Services",
+  title: "Ministry of secondary education",
+  description: "Official portal for the Delta State Government Ministry of secondary education - BECE Result Verification and School Administration Services",
 };
 
 export default function RootLayout({

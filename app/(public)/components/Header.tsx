@@ -37,7 +37,7 @@ const Header = () => {
                 Delta State Government
               </p>
               <h1 className="text-base md:text-lg lg:text-xl xl:text-2xl font-semibold leading-tight">
-                Ministry Of Secondary School Education
+                Ministry of secondary education
               </h1>
               <p className="text-xs md:text-sm xl:text-base opacity-80">
                 Official Portal

@@ -94,7 +94,7 @@ export default function AccessPage() {
             </div>
             <div className="border-l border-primary-foreground/30 pl-3">
               <p className="text-xs font-medium tracking-wide uppercase opacity-90">Delta State Government</p>
-              <p className="text-sm font-semibold">Ministry Of Secondary School Education</p>
+              <p className="text-sm font-semibold">Ministry of secondary education</p>
             </div>
           </div>
         </div>
@@ -224,7 +224,7 @@ export default function AccessPage() {
       {/* Footer */}
       <footer className="bg-primary text-primary-foreground py-4">
         <div className="container mx-auto px-4 xl:px-8 2xl:px-12 text-center text-xs opacity-80 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px]">
-          &copy; {new Date().getFullYear()} Delta State Government, Ministry Of Secondary School Education
+          &copy; {new Date().getFullYear()} Delta State Government, Ministry of secondary education
         </div>
       </footer>
     </div>

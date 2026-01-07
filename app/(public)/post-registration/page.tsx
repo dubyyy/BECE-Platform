@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Removed shadcn Select - using native select elements instead
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Upload, Edit2, X, Trash2, CheckCircle2, AlertCircle, Printer, Save, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Upload, Edit2, X, Trash2, CheckCircle2, AlertCircle, Printer, Save, AlertTriangle, Check } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import schoolsData from '@/data.json';
 
@@ -29,6 +30,18 @@ interface SchoolData {
   id: string;
 }
 
+// CA Score structure for each subject: { year1, year2, year3 }
+interface CAScore {
+  year1: string;
+  year2: string;
+  year3: string;
+}
+
+// Dynamic CA scores keyed by subject code
+interface CAScores {
+  [subjectCode: string]: CAScore;
+}
+
 interface Registration {
   id: string | number;
   studentNumber: string;
@@ -39,10 +52,14 @@ interface Registration {
   gender: string;
   schoolType: string;
   passport: string | null;
-  english: { year1: string; year2: string; year3: string };
-  arithmetic: { year1: string; year2: string; year3: string };
-  general: { year1: string; year2: string; year3: string };
-  religious: { year1: string; year2: string; year3: string; type: string };
+  // Legacy fields for backward compatibility
+  english?: { year1: string; year2: string; year3: string };
+  arithmetic?: { year1: string; year2: string; year3: string };
+  general?: { year1: string; year2: string; year3: string };
+  religious?: { year1: string; year2: string; year3: string; type: string };
+  // New dynamic CA scores
+  caScores?: CAScores;
+  studentSubjects?: string[];
   isLateRegistration?: boolean;
   year?: string;
   prcd?: number;
@@ -86,8 +103,26 @@ function formatLgaLabel(name: string) {
     .join(" ");
 }
 
+// Subject list with codes for secondary school
+const SUBJECTS = [
+  { code: "ENG", name: "English Language" },
+  { code: "MTH", name: "Mathematics" },
+  { code: "BST", name: "Basic Science and Technology" },
+  { code: "RGS", name: "Religious Studies" },
+  { code: "HST", name: "Historical Studies" },
+  { code: "ARB", name: "Arabic Studies" },
+  { code: "CCA", name: "Cultural and Creative Arts" },
+  { code: "FRE", name: "French" },
+  { code: "NVS", name: "National Values" },
+  { code: "PVS", name: "Pre Vocational Studies" },
+  { code: "BUS", name: "Business Studies" },
+];
+
 const SchoolRegistration = () => {
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  // Per-student subject selection (for current student being registered)
+  const [studentSubjects, setStudentSubjects] = useState<string[]>([]);
   const [lgaCode, setLgaCode] = useState<string>("");
   const [schoolCode, setSchoolCode] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -98,18 +133,8 @@ const SchoolRegistration = () => {
   const [firstname, setFirstname] = useState<string>("");
   const [othername, setOthername] = useState<string>("");
   const [dateOfBirth, setDateOfBirth] = useState<string>("");
-  const [englishYear1, setEnglishYear1] = useState<string>("");
-  const [englishYear2, setEnglishYear2] = useState<string>("");
-  const [englishYear3, setEnglishYear3] = useState<string>("");
-  const [arithmeticYear1, setArithmeticYear1] = useState<string>("");
-  const [arithmeticYear2, setArithmeticYear2] = useState<string>("");
-  const [arithmeticYear3, setArithmeticYear3] = useState<string>("");
-  const [generalYear1, setGeneralYear1] = useState<string>("");
-  const [generalYear2, setGeneralYear2] = useState<string>("");
-  const [generalYear3, setGeneralYear3] = useState<string>("");
-  const [religiousYear1, setReligiousYear1] = useState<string>("");
-  const [religiousYear2, setReligiousYear2] = useState<string>("");
-  const [religiousYear3, setReligiousYear3] = useState<string>("");
+  // Dynamic CA scores state - keyed by subject code
+  const [caScores, setCaScores] = useState<CAScores>({});
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editData, setEditData] = useState<Registration | null>(null);
@@ -198,6 +223,25 @@ const SchoolRegistration = () => {
     }
   };
 
+  // Toggle subject selection for current student
+  const handleSubjectToggle = (code: string) => {
+    setStudentSubjects(prev => {
+      if (prev.includes(code)) {
+        return prev.filter(c => c !== code);
+      } else {
+        return [...prev, code];
+      }
+    });
+    // Remove CA scores for deselected subject (outside setState callback)
+    if (studentSubjects.includes(code)) {
+      setCaScores(prev => {
+        const newScores = { ...prev };
+        delete newScores[code];
+        return newScores;
+      });
+    }
+  };
+
   // Check for existing JWT token on component mount
   useEffect(() => {
     const token = localStorage.getItem('schoolToken');
@@ -263,6 +307,8 @@ const SchoolRegistration = () => {
         general: { year1: r.generalYear1, year2: r.generalYear2, year3: r.generalYear3 },
         religious: { type: r.religiousType, year1: r.religiousYear1, year2: r.religiousYear2, year3: r.religiousYear3 },
         isLateRegistration: r.lateRegistration || false,
+        studentSubjects: r.studentSubjects || [],
+        caScores: r.caScores || {},
       }));
       setRegistrations(mapped);
     } catch (e) {
@@ -363,7 +409,7 @@ const SchoolRegistration = () => {
     
     const currentYear = new Date().getFullYear();
     const nextYear = currentYear + 1;
-    const headerLine1 = 'MINISTRY OF SECONDARY SCHOOL EDUCATION';
+    const headerLine1 = 'MINISTRY OF SECONDARY EDUCATION';
     const headerLine2 = `LGA: ${actualLgaCode} :: ${lgaName || 'ANIOCHA-NORTH'} SCHOOL CODE: ${schoolCode || '1'} : ${school}`;
     const headerLine3 = `${currentYear}/${nextYear} Basic Education Certificate Examination`;
 
@@ -644,18 +690,9 @@ const SchoolRegistration = () => {
     setFirstname("");
     setOthername("");
     setDateOfBirth("");
-    setEnglishYear1("");
-    setEnglishYear2("");
-    setEnglishYear3("");
-    setArithmeticYear1("");
-    setArithmeticYear2("");
-    setArithmeticYear3("");
-    setGeneralYear1("");
-    setGeneralYear2("");
-    setGeneralYear3("");
-    setReligiousYear1("");
-    setReligiousYear2("");
-    setReligiousYear3("");
+    // Reset per-student subject selection and CA scores
+    setStudentSubjects([]);
+    setCaScores({});
   };
 
   // Helper function to limit score input to 2 digits
@@ -765,7 +802,7 @@ const SchoolRegistration = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-2xl">
-                    {isLoggedIn ? "Primary School Registration" : (isSignupMode ? "School Signup" : "School Login")}
+                    {isLoggedIn ? "Secondary School Registration" : (isSignupMode ? "School Signup" : "School Login")}
                   </CardTitle>
                   <CardDescription>
                     {isLoggedIn 
@@ -806,18 +843,20 @@ const SchoolRegistration = () => {
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="lga">Local Government Area (LGA)</Label>
-                    <Select value={lgaCode} onValueChange={setLgaCode} required>
-                      <SelectTrigger id="lga">
-                        <SelectValue placeholder="Select your LGA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LGAS.map((item) => (
-                          <SelectItem key={item.code} value={item.code}>
-                            {formatLgaLabel(item.name)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      id="lga"
+                      value={lgaCode}
+                      onChange={(e) => setLgaCode(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="">Select your LGA</option>
+                      {LGAS.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {formatLgaLabel(item.name)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
@@ -893,7 +932,17 @@ const SchoolRegistration = () => {
                 )}
                 <form className="space-y-6" onSubmit={async (e) => {
                   e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
+                  const form = e.currentTarget;
+                  const formData = new FormData(form);
+
+                  // Check if all selected subjects have complete CA scores
+                  const allSubjectsHaveScores = studentSubjects.every(code => {
+                    const scores = caScores[code];
+                    return scores && scores.year1 !== "" && scores.year2 !== "" && scores.year3 !== "";
+                  });
+
+                  // Check if RGS is selected and religiousType is set
+                  const hasReligiousType = !studentSubjects.includes('RGS') || religiousType !== "";
 
                   // Ensure all required fields are filled before allowing submission
                   const isFormComplete =
@@ -903,12 +952,9 @@ const SchoolRegistration = () => {
                     dateOfBirth.trim() !== "" &&
                     gender !== "" &&
                     schoolType !== "" &&
-                    religiousType !== "" &&
+                    hasReligiousType &&
                     selectedImage !== null &&
-                    englishYear1 !== "" && englishYear2 !== "" && englishYear3 !== "" &&
-                    arithmeticYear1 !== "" && arithmeticYear2 !== "" && arithmeticYear3 !== "" &&
-                    generalYear1 !== "" && generalYear2 !== "" && generalYear3 !== "" &&
-                    religiousYear1 !== "" && religiousYear2 !== "" && religiousYear3 !== "";
+                    allSubjectsHaveScores;
 
                   if (!isFormComplete) {
                     return;
@@ -925,27 +971,16 @@ const SchoolRegistration = () => {
                     gender: gender,
                     schoolType: schoolType,
                     passport: selectedImage,
-                    english: {
-                      year1: englishYear1 || '-',
-                      year2: englishYear2 || '-',
-                      year3: englishYear3 || '-',
-                    },
-                    arithmetic: {
-                      year1: arithmeticYear1 || '-',
-                      year2: arithmeticYear2 || '-',
-                      year3: arithmeticYear3 || '-',
-                    },
-                    general: {
-                      year1: generalYear1 || '-',
-                      year2: generalYear2 || '-',
-                      year3: generalYear3 || '-',
-                    },
-                    religious: {
-                      year1: religiousYear1 || '-',
-                      year2: religiousYear2 || '-',
-                      year3: religiousYear3 || '-',
+                    // Store dynamic CA scores and selected subjects
+                    caScores: caScores,
+                    studentSubjects: studentSubjects,
+                    // Keep religiousType for backward compatibility
+                    religious: studentSubjects.includes('RGS') ? {
+                      year1: caScores['RGS']?.year1 || '-',
+                      year2: caScores['RGS']?.year2 || '-',
+                      year3: caScores['RGS']?.year3 || '-',
                       type: religiousType,
-                    },
+                    } : undefined,
                     isLateRegistration: isLateRegistrationMode || !registrationOpen,
                   };
                   
@@ -965,7 +1000,7 @@ const SchoolRegistration = () => {
 
                   // No duplicate found, proceed with registration
                   await processRegistration(newRegistration);
-                  e.currentTarget.reset();
+                  // Form fields are reset in processRegistration via state setters
                 }}>
                 <div className="space-y-2">
                   <Label htmlFor="lastname">Lastname/Surname</Label>
@@ -1020,28 +1055,32 @@ const SchoolRegistration = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
-                  <Select value={gender} onValueChange={setGender} required>
-                    <SelectTrigger id="gender">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    id="gender"
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="schoolType">School Type</Label>
-                  <Select value={schoolType} onValueChange={setSchoolType} required>
-                    <SelectTrigger id="schoolType">
-                      <SelectValue placeholder="Select school type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="public">Public School</SelectItem>
-                      <SelectItem value="private">Private School</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select
+                    id="schoolType"
+                    value={schoolType}
+                    onChange={(e) => setSchoolType(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Select school type</option>
+                    <option value="public">Public School</option>
+                    <option value="private">Private School</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
@@ -1070,232 +1109,161 @@ const SchoolRegistration = () => {
                   </div>
                 </div>
 
-                {/* Continuous Assessment Section */}
+                {/* Examination Subject Selection - Per Student */}
+                <div className="space-y-4 pt-6 border-t">
+                  <div>
+                    <h3 className="text-lg font-semibold">Examination Subjects</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Select the BECE subjects this student will be registered for
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {SUBJECTS.map((subject) => {
+                      const isSelected = studentSubjects.includes(subject.code);
+                      return (
+                        <div
+                          key={subject.code}
+                          className={`
+                            flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all
+                            ${isSelected 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/50"
+                            }
+                          `}
+                          onClick={() => handleSubjectToggle(subject.code)}
+                        >
+                          <div className={`size-4 shrink-0 rounded-[4px] border flex items-center justify-center ${isSelected ? "bg-primary border-primary text-white" : "border-input"}`}>
+                            {isSelected && <Check className="size-3" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span 
+                              className="text-sm font-medium cursor-pointer block truncate"
+                            >
+                              {subject.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              ({subject.code})
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {studentSubjects.length === 0 && (
+                    <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                      Please select at least one examination subject for this student.
+                    </p>
+                  )}
+                </div>
+
+                {/* Continuous Assessment Section - Dynamic based on selected subjects */}
+                {studentSubjects.length > 0 && (
                 <div className="space-y-6 pt-6 border-t">
                   <div>
                     <h3 className="text-lg font-semibold">Continuous Assessment</h3>
-                    <p className="text-sm text-muted-foreground">Enter assessment scores for each year (Optional)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Enter CA scores for the {studentSubjects.length} selected subject{studentSubjects.length !== 1 ? 's' : ''}
+                    </p>
                   </div>
                   
-                  {/* English */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">English</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="english-year1" className="text-sm">First Year</Label>
-                        <Input
-                          id="english-year1"
-                          name="english-year1"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={englishYear1}
-                          onChange={(e) => setEnglishYear1(e.target.value)}
-                        />
+                  {/* Dynamic Subject CA Inputs */}
+                  {studentSubjects.map((subjectCode) => {
+                    const subject = SUBJECTS.find(s => s.code === subjectCode);
+                    if (!subject) return null;
+                    
+                    // Ensure scores is always a valid object with default values
+                    const rawScores = caScores[subjectCode];
+                    const scores = {
+                      year1: rawScores?.year1 ?? '',
+                      year2: rawScores?.year2 ?? '',
+                      year3: rawScores?.year3 ?? '',
+                    };
+                    
+                    const updateScore = (year: 'year1' | 'year2' | 'year3', value: string) => {
+                      setCaScores(prev => ({
+                        ...prev,
+                        [subjectCode]: {
+                          year1: prev[subjectCode]?.year1 ?? '',
+                          year2: prev[subjectCode]?.year2 ?? '',
+                          year3: prev[subjectCode]?.year3 ?? '',
+                          [year]: value,
+                        }
+                      }));
+                    };
+                    
+                    return (
+                      <div key={subjectCode} className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <Label className="text-base font-medium">{subject.name}</Label>
+                          <span className="text-xs text-muted-foreground font-mono">({subjectCode})</span>
+                          {/* Religious type selector for RGS */}
+                          {subjectCode === 'RGS' && (
+                            <select
+                              value={religiousType}
+                              onChange={(e) => setReligiousType(e.target.value)}
+                              className="flex h-9 w-[200px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              required
+                            >
+                              <option value="">Select type</option>
+                              <option value="islam">Islamic Studies</option>
+                              <option value="christian">Christian Religious Studies</option>
+                            </select>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`${subjectCode}-year1`} className="text-sm">First Year</Label>
+                            <Input
+                              id={`${subjectCode}-year1`}
+                              name={`${subjectCode}-year1`}
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              onInput={handleScoreInput}
+                              required
+                              value={scores.year1}
+                              onChange={(e) => updateScore('year1', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`${subjectCode}-year2`} className="text-sm">Second Year</Label>
+                            <Input
+                              id={`${subjectCode}-year2`}
+                              name={`${subjectCode}-year2`}
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              onInput={handleScoreInput}
+                              required
+                              value={scores.year2}
+                              onChange={(e) => updateScore('year2', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`${subjectCode}-year3`} className="text-sm">Third Year</Label>
+                            <Input
+                              id={`${subjectCode}-year3`}
+                              name={`${subjectCode}-year3`}
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              onInput={handleScoreInput}
+                              required
+                              value={scores.year3}
+                              onChange={(e) => updateScore('year3', e.target.value)}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="english-year2" className="text-sm">Second Year</Label>
-                        <Input
-                          id="english-year2"
-                          name="english-year2"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={englishYear2}
-                          onChange={(e) => setEnglishYear2(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="english-year3" className="text-sm">Third Year</Label>
-                        <Input
-                          id="english-year3"
-                          name="english-year3"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={englishYear3}
-                          onChange={(e) => setEnglishYear3(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Arithmetic */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">Arithmetic</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="arithmetic-year1" className="text-sm">First Year</Label>
-                        <Input
-                          id="arithmetic-year1"
-                          name="arithmetic-year1"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={arithmeticYear1}
-                          onChange={(e) => setArithmeticYear1(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="arithmetic-year2" className="text-sm">Second Year</Label>
-                        <Input
-                          id="arithmetic-year2"
-                          name="arithmetic-year2"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={arithmeticYear2}
-                          onChange={(e) => setArithmeticYear2(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="arithmetic-year3" className="text-sm">Third Year</Label>
-                        <Input
-                          id="arithmetic-year3"
-                          name="arithmetic-year3"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={arithmeticYear3}
-                          onChange={(e) => setArithmeticYear3(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* General Paper */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-medium">General Paper</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="general-year1" className="text-sm">First Year</Label>
-                        <Input
-                          id="general-year1"
-                          name="general-year1"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={generalYear1}
-                          onChange={(e) => setGeneralYear1(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="general-year2" className="text-sm">Second Year</Label>
-                        <Input
-                          id="general-year2"
-                          name="general-year2"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={generalYear2}
-                          onChange={(e) => setGeneralYear2(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="general-year3" className="text-sm">Third Year</Label>
-                        <Input
-                          id="general-year3"
-                          name="general-year3"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={generalYear3}
-                          onChange={(e) => setGeneralYear3(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Religious Studies */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4">
-                      <Label className="text-base font-medium">Religious Studies</Label>
-                      <Select value={religiousType} onValueChange={setReligiousType} required>
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="islam">Islamic Studies</SelectItem>
-                          <SelectItem value="christian">Christian Religious Studies</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="religious-year1" className="text-sm">First Year</Label>
-                        <Input
-                          id="religious-year1"
-                          name="religious-year1"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={religiousYear1}
-                          onChange={(e) => setReligiousYear1(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="religious-year2" className="text-sm">Second Year</Label>
-                        <Input
-                          id="religious-year2"
-                          name="religious-year2"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={religiousYear2}
-                          onChange={(e) => setReligiousYear2(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="religious-year3" className="text-sm">Third Year</Label>
-                        <Input
-                          id="religious-year3"
-                          name="religious-year3"
-                          placeholder="0-99"
-                          type="number"
-                          min="0"
-                          max="99"
-                          onInput={handleScoreInput}
-                          required
-                          value={religiousYear3}
-                          onChange={(e) => setReligiousYear3(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
+                )}
 
                 <Button
                   type="submit"
@@ -1306,12 +1274,13 @@ const SchoolRegistration = () => {
                     firstname.trim() === "" ||
                     gender === "" ||
                     schoolType === "" ||
-                    religiousType === "" ||
+                    studentSubjects.length === 0 ||
+                    (studentSubjects.includes('RGS') && religiousType === "") ||
                     selectedImage === null ||
-                    englishYear1 === "" || englishYear2 === "" || englishYear3 === "" ||
-                    arithmeticYear1 === "" || arithmeticYear2 === "" || arithmeticYear3 === "" ||
-                    generalYear1 === "" || generalYear2 === "" || generalYear3 === "" ||
-                    religiousYear1 === "" || religiousYear2 === "" || religiousYear3 === ""
+                    !studentSubjects.every(code => {
+                      const scores = caScores[code];
+                      return scores && scores.year1 !== "" && scores.year2 !== "" && scores.year3 !== "";
+                    })
                   }
                 >
                   Submit Registration
@@ -1426,10 +1395,7 @@ const SchoolRegistration = () => {
                         <TableHead>Full Name</TableHead>
                         <TableHead>Gender</TableHead>
                         <TableHead>School Type</TableHead>
-                        <TableHead>English (Y1/Y2/Y3)</TableHead>
-                        <TableHead>Arithmetic (Y1/Y2/Y3)</TableHead>
-                        <TableHead>General Paper (Y1/Y2/Y3)</TableHead>
-                        <TableHead>Religious Studies (Y1/Y2/Y3)</TableHead>
+                        <TableHead>CA Scores (Y1/Y2/Y3)</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1459,11 +1425,9 @@ const SchoolRegistration = () => {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div className="font-mono text-sm font-semibold">{reg.studentNumber}</div>
-                                {reg.isLateRegistration && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
-                                    LATE
-                                  </span>
-                                )}
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300">
+                                  POST
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1494,198 +1458,81 @@ const SchoolRegistration = () => {
                             </TableCell>
                             <TableCell>
                               {isEditing ? (
-                                <Select
+                                <select
                                   value={currentData.gender}
-                                  onValueChange={(value) => setEditData({...currentData, gender: value})}
+                                  onChange={(e) => setEditData({...currentData, gender: e.target.value})}
+                                  className="h-8 w-[100px] rounded-md border border-input bg-transparent px-2 py-1 text-sm"
                                 >
-                                  <SelectTrigger className="h-8 w-[100px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="male">Male</SelectItem>
-                                    <SelectItem value="female">Female</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                  <option value="male">Male</option>
+                                  <option value="female">Female</option>
+                                </select>
                               ) : (
                                 <span className="capitalize">{reg.gender}</span>
                               )}
                             </TableCell>
                             <TableCell>
                               {isEditing ? (
-                                <Select
+                                <select
                                   value={currentData.schoolType}
-                                  onValueChange={(value) => setEditData({...currentData, schoolType: value})}
+                                  onChange={(e) => setEditData({...currentData, schoolType: e.target.value})}
+                                  className="h-8 w-[120px] rounded-md border border-input bg-transparent px-2 py-1 text-sm"
                                 >
-                                  <SelectTrigger className="h-8 w-[120px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="public">Public</SelectItem>
-                                    <SelectItem value="private">Private</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                  <option value="public">Public</option>
+                                  <option value="private">Private</option>
+                                </select>
                               ) : (
                                 <span className="capitalize">{reg.schoolType}</span>
                               )}
                             </TableCell>
+                            {/* Dynamic CA Scores Cell */}
                             <TableCell>
-                              {isEditing ? (
-                                <div className="flex gap-1">
-                                  <Input
-                                    type="number"
-                                    value={currentData.english.year1}
-                                    onChange={(e) => setEditData({...currentData, english: {...currentData.english, year1: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                  <Input
-                                    type="number"
-                                    value={currentData.english.year2}
-                                    onChange={(e) => setEditData({...currentData, english: {...currentData.english, year2: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                  <Input
-                                    type="number"
-                                    value={currentData.english.year3}
-                                    onChange={(e) => setEditData({...currentData, english: {...currentData.english, year3: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                </div>
-                              ) : (
-                                <span>{reg.english.year1}/{reg.english.year2}/{reg.english.year3}</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {isEditing ? (
-                                <div className="flex gap-1">
-                                  <Input
-                                    type="number"
-                                    value={currentData.arithmetic.year1}
-                                    onChange={(e) => setEditData({...currentData, arithmetic: {...currentData.arithmetic, year1: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                  <Input
-                                    type="number"
-                                    value={currentData.arithmetic.year2}
-                                    onChange={(e) => setEditData({...currentData, arithmetic: {...currentData.arithmetic, year2: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                  <Input
-                                    type="number"
-                                    value={currentData.arithmetic.year3}
-                                    onChange={(e) => setEditData({...currentData, arithmetic: {...currentData.arithmetic, year3: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                </div>
-                              ) : (
-                                <span>{reg.arithmetic.year1}/{reg.arithmetic.year2}/{reg.arithmetic.year3}</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {isEditing ? (
-                                <div className="flex gap-1">
-                                  <Input
-                                    type="number"
-                                    value={currentData.general.year1}
-                                    onChange={(e) => setEditData({...currentData, general: {...currentData.general, year1: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                  <Input
-                                    type="number"
-                                    value={currentData.general.year2}
-                                    onChange={(e) => setEditData({...currentData, general: {...currentData.general, year2: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                  <Input
-                                    type="number"
-                                    value={currentData.general.year3}
-                                    onChange={(e) => setEditData({...currentData, general: {...currentData.general, year3: e.target.value}})}
-                                    onInput={handleScoreInput}
-                                    className="h-8 w-16"
-                                    min="0"
-                                    max="99"
-                                  />
-                                </div>
-                              ) : (
-                                <span>{reg.general.year1}/{reg.general.year2}/{reg.general.year3}</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {isEditing ? (
-                                <div className="space-y-2">
-                                  <Select
-                                    value={currentData.religious.type}
-                                    onValueChange={(value) => setEditData({...currentData, religious: {...currentData.religious, type: value}})}
-                                  >
-                                    <SelectTrigger className="h-8 w-[140px]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="islam">Islamic</SelectItem>
-                                      <SelectItem value="christian">Christian</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <div className="flex gap-1">
-                                    <Input
-                                      type="number"
-                                      value={currentData.religious.year1}
-                                      onChange={(e) => setEditData({...currentData, religious: {...currentData.religious, year1: e.target.value}})}
-                                      onInput={handleScoreInput}
-                                      className="h-8 w-16"
-                                      min="0"
-                                      max="99"
-                                    />
-                                    <Input
-                                      type="number"
-                                      value={currentData.religious.year2}
-                                      onChange={(e) => setEditData({...currentData, religious: {...currentData.religious, year2: e.target.value}})}
-                                      onInput={handleScoreInput}
-                                      className="h-8 w-16"
-                                      min="0"
-                                      max="99"
-                                    />
-                                    <Input
-                                      type="number"
-                                      value={currentData.religious.year3}
-                                      onChange={(e) => setEditData({...currentData, religious: {...currentData.religious, year3: e.target.value}})}
-                                      onInput={handleScoreInput}
-                                      className="h-8 w-16"
-                                      min="0"
-                                      max="99"
-                                    />
+                              <div className="space-y-1 text-xs max-w-[300px]">
+                                {(() => {
+                                  // Parse caScores once, safely
+                                  let caScoresObj: Record<string, { year1?: string; year2?: string; year3?: string }> | null = null;
+                                  if (reg.caScores) {
+                                    try {
+                                      caScoresObj = typeof reg.caScores === 'string' 
+                                        ? JSON.parse(reg.caScores) 
+                                        : reg.caScores;
+                                    } catch {
+                                      caScoresObj = null;
+                                    }
+                                  }
+                                  
+                                  if (caScoresObj && reg.studentSubjects && reg.studentSubjects.length > 0) {
+                                    // New dynamic CA scores display
+                                    return reg.studentSubjects.map((code) => {
+                                      const subject = SUBJECTS.find(s => s.code === code);
+                                      const scores = caScoresObj?.[code];
+                                      if (!subject) return null;
+                                      return (
+                                        <div key={code} className="flex items-center gap-2">
+                                          <span className="font-medium text-muted-foreground w-8">{code}:</span>
+                                          <span>{scores?.year1 || '-'}/{scores?.year2 || '-'}/{scores?.year3 || '-'}</span>
+                                          {code === 'RGS' && reg.religious?.type && (
+                                            <span className="text-muted-foreground">({reg.religious.type === 'islam' ? 'Islamic' : 'Christian'})</span>
+                                          )}
+                                        </div>
+                                      );
+                                    });
+                                  }
+                                  return (
+                                  // Legacy display for backward compatibility
+                                  <div className="space-y-1">
+                                    {reg.english && <div><span className="font-medium text-muted-foreground">ENG:</span> {reg.english.year1}/{reg.english.year2}/{reg.english.year3}</div>}
+                                    {reg.arithmetic && <div><span className="font-medium text-muted-foreground">MTH:</span> {reg.arithmetic.year1}/{reg.arithmetic.year2}/{reg.arithmetic.year3}</div>}
+                                    {reg.general && <div><span className="font-medium text-muted-foreground">GP:</span> {reg.general.year1}/{reg.general.year2}/{reg.general.year3}</div>}
+                                    {reg.religious && (
+                                      <div>
+                                        <span className="font-medium text-muted-foreground">RGS:</span> {reg.religious.year1}/{reg.religious.year2}/{reg.religious.year3}
+                                        <span className="ml-1 text-muted-foreground">({reg.religious.type === 'islam' ? 'Islamic' : 'Christian'})</span>
+                                      </div>
+                                    )}
                                   </div>
-                                </div>
-                              ) : (
-                                <div>
-                                  <div className="text-xs text-muted-foreground mb-1">
-                                    {reg.religious.type === 'islam' ? 'Islamic' : 'Christian'}
-                                  </div>
-                                  <div>{reg.religious.year1}/{reg.religious.year2}/{reg.religious.year3}</div>
-                                </div>
-                              )}
+                                  );
+                                })()}
+                              </div>
                             </TableCell>
                             <TableCell>
                               {isEditing ? (
@@ -1707,10 +1554,9 @@ const SchoolRegistration = () => {
                                           gender: editData!.gender,
                                           schoolType: editData!.schoolType,
                                           passport: editData!.passport,
-                                          english: { ...editData!.english },
-                                          arithmetic: { ...editData!.arithmetic },
-                                          general: { ...editData!.general },
-                                          religious: { ...editData!.religious },
+                                          caScores: editData!.caScores,
+                                          studentSubjects: editData!.studentSubjects,
+                                          religious: editData!.religious,
                                         };
                                         const res = await fetch('/api/school/post-registrations', {
                                           method: 'PATCH',
@@ -1821,25 +1667,27 @@ const SchoolRegistration = () => {
             <AlertDialogTitle className="text-center text-xl font-bold text-gray-900">
               Student Already Registered
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-4 pt-2">
-              <p className="text-center text-gray-600">
-                This student has already been added to the system:
-              </p>
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
-                {duplicateNames.map((dup, idx) => (
-                  <div key={idx} className="text-center">
-                    <p className="text-lg font-bold text-red-900">
-                      {dup.firstname} {dup.othername} {dup.lastname}
-                    </p>
-                    <p className="text-sm text-red-700 mt-1">
-                      Student Number: <span className="font-semibold">{dup.studentNumber}</span>
-                    </p>
-                  </div>
-                ))}
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2 text-sm text-muted-foreground">
+                <p className="text-center text-gray-600">
+                  This student has already been added to the system:
+                </p>
+                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 space-y-2">
+                  {duplicateNames.map((dup, idx) => (
+                    <div key={idx} className="text-center">
+                      <p className="text-lg font-bold text-red-900">
+                        {dup.firstname} {dup.othername} {dup.lastname}
+                      </p>
+                      <p className="text-sm text-red-700 mt-1">
+                        Student Number: <span className="font-semibold">{dup.studentNumber}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center text-sm text-gray-500 italic">
+                  Would you like to register this student again anyway?
+                </p>
               </div>
-              <p className="text-center text-sm text-gray-500 italic">
-                Would you like to register this student again anyway?
-              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center gap-3">

@@ -61,6 +61,7 @@ interface Registration {
   caScores?: CAScores;
   studentSubjects?: string[];
   isLateRegistration?: boolean;
+  isPostRegistration?: boolean; // True if from post-registration
   year?: string;
   prcd?: number;
 }
@@ -114,7 +115,6 @@ const SUBJECTS = [
   { code: "CCA", name: "Cultural and Creative Arts" },
   { code: "FRE", name: "French" },
   { code: "NVS", name: "National Values" },
-  { code: "LLG", name: "Local Language" },
   { code: "PVS", name: "Pre Vocational Studies" },
   { code: "BUS", name: "Business Studies" },
 ];
@@ -272,6 +272,8 @@ const SchoolRegistration = () => {
     try {
       const token = localStorage.getItem('schoolToken');
       if (!token) return;
+      
+      // Fetch regular registrations
       const res = await fetch('/api/school/registrations', {
         method: 'GET',
         headers: {
@@ -293,7 +295,7 @@ const SchoolRegistration = () => {
         return;
       }
       const data = await res.json();
-      const mapped: Registration[] = (data.registrations || []).map((r: any) => ({
+      const regularRegs: Registration[] = (data.registrations || []).map((r: any) => ({
         id: r.id,
         studentNumber: r.studentNumber,
         lastname: r.lastname,
@@ -308,10 +310,48 @@ const SchoolRegistration = () => {
         general: { year1: r.generalYear1, year2: r.generalYear2, year3: r.generalYear3 },
         religious: { type: r.religiousType, year1: r.religiousYear1, year2: r.religiousYear2, year3: r.religiousYear3 },
         isLateRegistration: r.lateRegistration || false,
+        isPostRegistration: false,
         studentSubjects: r.studentSubjects || [],
         caScores: r.caScores || {},
       }));
-      setRegistrations(mapped);
+      
+      // Also fetch post-registrations
+      let postRegs: Registration[] = [];
+      try {
+        const postRes = await fetch('/api/school/post-registrations', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (postRes.ok) {
+          const postData = await postRes.json();
+          postRegs = (postData.registrations || []).map((r: any) => ({
+            id: `post-${r.id}`, // Prefix to avoid ID collision
+            studentNumber: r.studentNumber,
+            lastname: r.lastname,
+            othername: r.othername || '',
+            firstname: r.firstname,
+            dateOfBirth: r.dateOfBirth ? new Date(r.dateOfBirth).toISOString().split('T')[0] : '',
+            gender: r.gender,
+            schoolType: r.schoolType,
+            passport: r.passport || null,
+            english: { year1: r.englishYear1, year2: r.englishYear2, year3: r.englishYear3 },
+            arithmetic: { year1: r.arithmeticYear1, year2: r.arithmeticYear2, year3: r.arithmeticYear3 },
+            general: { year1: r.generalYear1, year2: r.generalYear2, year3: r.generalYear3 },
+            religious: { type: r.religiousType, year1: r.religiousYear1, year2: r.religiousYear2, year3: r.religiousYear3 },
+            isLateRegistration: r.lateRegistration || false,
+            isPostRegistration: true,
+            studentSubjects: r.studentSubjects || [],
+            caScores: r.caScores || {},
+          }));
+        }
+      } catch (postErr) {
+        console.error('Error fetching post-registrations:', postErr);
+      }
+      
+      // Merge both types of registrations
+      setRegistrations([...regularRegs, ...postRegs]);
     } catch (e) {
       console.error('Error loading registrations from server:', e);
     }
@@ -410,7 +450,7 @@ const SchoolRegistration = () => {
     
     const currentYear = new Date().getFullYear();
     const nextYear = currentYear + 1;
-    const headerLine1 = 'MINISTRY OF SECONDARY SCHOOL EDUCATION';
+    const headerLine1 = 'MINISTRY OF SECONDARY EDUCATION';
     const headerLine2 = `LGA: ${actualLgaCode} :: ${lgaName || 'ANIOCHA-NORTH'} SCHOOL CODE: ${schoolCode || '1'} : ${school}`;
     const headerLine3 = `${currentYear}/${nextYear} BASIC EDUCATION CERTIFICATE EXAMINATION (BECE)`;
 
@@ -1447,7 +1487,11 @@ const SchoolRegistration = () => {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <div className="font-mono text-sm font-semibold">{reg.studentNumber}</div>
-                                {reg.isLateRegistration && (
+                                {reg.isPostRegistration ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300">
+                                    POST
+                                  </span>
+                                ) : reg.isLateRegistration && (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
                                     LATE
                                   </span>

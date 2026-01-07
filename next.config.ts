@@ -1,17 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  
   // Optimize production builds
   poweredByHeader: false, // Remove X-Powered-By header for security
   compress: true, // Enable gzip compression
   
   // Output optimization for serverless deployment (Vercel, Railway, etc.)
   output: 'standalone',
-  
-  // Turbopack configuration (disabled due to HMR issues in 16.0.8)
-  // turbopack: {
-  //   root: process.cwd(), // Set the correct root directory
-  // },
   
   // Optimize images with CDN support
   images: {

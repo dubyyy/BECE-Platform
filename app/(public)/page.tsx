@@ -92,7 +92,7 @@ const Index = () => {
                   <p className="text-sm xl:text-base text-muted-foreground leading-relaxed">
                     This portal provides official services for the verification of Basic Education Certificate Examination (BECE) 
                     results and access to school administrative functions. All data is 
-                    sourced directly from the Ministry Of Secondary School Education records.
+                    sourced directly from the Ministry of secondary education records.
                   </p>
                 </div>
 

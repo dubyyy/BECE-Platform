@@ -20,7 +20,6 @@ const SUBJECTS = [
   { code: "CCA", name: "Cultural and Creative Arts" },
   { code: "FRE", name: "French" },
   { code: "NVS", name: "National Values" },
-  { code: "LLG", name: "Local Language" },
   { code: "PVS", name: "Pre Vocational Studies" },
   { code: "BUS", name: "Business Studies" },
 ];
