@@ -340,7 +340,7 @@ export async function POST(req: NextRequest) {
       schoolType: reg.schoolType,
       passport: reg.passport,
       // Store dynamic CA scores and selected subjects
-      caScores: reg.caScores || null,
+      caScores: reg.caScores ?? undefined,
       studentSubjects: reg.studentSubjects || [],
       // Legacy fields - try to extract from caScores if available, otherwise use legacy fields
       englishTerm1: reg.caScores?.ENG?.year1 || reg.english?.year1 || reg.english?.term1 || '-',
