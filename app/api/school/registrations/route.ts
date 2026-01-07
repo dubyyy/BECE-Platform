@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { generateBatchAccCodes } from '@/lib/generate-acccode';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -340,7 +341,7 @@ export async function POST(req: NextRequest) {
       schoolType: reg.schoolType,
       passport: reg.passport,
       // Store dynamic CA scores and selected subjects
-      caScores: reg.caScores ?? undefined,
+      caScores: reg.caScores ? (reg.caScores as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
       studentSubjects: reg.studentSubjects || [],
       // Legacy fields - try to extract from caScores if available, otherwise use legacy fields
       englishTerm1: reg.caScores?.ENG?.year1 || reg.english?.year1 || reg.english?.term1 || '-',
