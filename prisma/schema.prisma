@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Result {
+  remark        String?
+  accessPin     String
+  arit          Float?
+  aritGrd       String?
+  blocked       Boolean   @default(false)
+  dateOfBirth   DateTime?
+  eng           Float?
+  engGrd        String?
+  examinationNo String    @unique
+  fName         String
+  gp            Float?
+  gpGrd         String?
+  institutionCd String?
+  lName         String
+  lgaCd         String
+  mName         String?
+  rgs           Float?
+  rgsGrd        String?
+  rgstype       String?
+  schoolName    String
+  sessionYr     String
+  sexCd         String
+  id            Int       @id @default(autoincrement())
+
+  @@map("Result")
+}
+
+model School {
+  id                      String                @id @default(cuid())
+  lgaCode                 String
+  schoolCode              String
+  schoolName              String
+  password                String
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  registrationOpen        Boolean               @default(true)
+  accessPin               String?
+  blocked                 Boolean               @default(false)
+  religiousClassification String?
+  postRegistrations       PostRegistration[]
+  studentRegistrations    StudentRegistration[]
+
+  @@unique([lgaCode, schoolCode])
+  @@index([lgaCode])
+  @@index([schoolCode])
+}
+
+model StudentRegistration {
+  id               String    @id @default(cuid())
+  studentNumber    String    @unique
+  firstname        String
+  othername        String?
+  lastname         String
+  gender           String
+  schoolType       String
+  passport         String?
+  englishTerm1     String?
+  englishTerm2     String?
+  englishTerm3     String?
+  arithmeticTerm1  String?
+  arithmeticTerm2  String?
+  arithmeticTerm3  String?
+  generalTerm1     String?
+  generalTerm2     String?
+  generalTerm3     String?
+  religiousType    String?
+  religiousTerm1   String?
+  religiousTerm2   String?
+  religiousTerm3   String?
+  schoolId         String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  accCode          String    @unique @default(cuid())
+  lateRegistration Boolean   @default(false)
+  prcd             Int       @default(1)
+  year             String    @default("2025/2026")
+  dateOfBirth      DateTime?
+  caScores         Json?     // Dynamic CA scores based on selected BECE subjects
+  studentSubjects String[]  @default([]) // Array of selected subject codes
+  school           School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([studentNumber])
+}
+
+model AccessPin {
+  id              String    @id @default(cuid())
+  pin             String    @unique
+  isActive        Boolean   @default(true)
+  usageCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  claimedAt       DateTime?
+  ownerLgaCode    String?
+  ownerSchoolCode String?
+  ownerSchoolName String?
+
+  @@index([pin])
+  @@index([isActive])
+}
+
+model PostRegistration {
+  id               String    @id @default(cuid())
+  studentNumber    String    @unique
+  firstname        String
+  othername        String?
+  lastname         String
+  dateOfBirth      DateTime?
+  gender           String
+  schoolType       String
+  passport         String?
+  englishTerm1     String?
+  englishTerm2     String?
+  englishTerm3     String?
+  arithmeticTerm1  String?
+  arithmeticTerm2  String?
+  arithmeticTerm3  String?
+  generalTerm1     String?
+  generalTerm2     String?
+  generalTerm3     String?
+  religiousType    String?
+  religiousTerm1   String?
+  religiousTerm2   String?
+  religiousTerm3   String?
+  schoolId         String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  accCode          String    @unique @default(cuid())
+  lateRegistration Boolean   @default(false)
+  prcd             Int       @default(1)
+  year             String    @default("2025/2026")
+  caScores         Json?     // Dynamic CA scores based on selected BECE subjects
+  studentSubjects String[]  @default([]) // Array of selected subject codes
+  school           School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([studentNumber])
+}
+
+model SchoolData {
+  id        String   @id @default(cuid())
+  lgaCode   String
+  lCode     String
+  schCode   String
+  progID    String
+  schName   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  blocked   Boolean  @default(false)
+
+  @@unique([lgaCode, schCode])
+  @@index([lgaCode])
+  @@index([schCode])
+  @@index([lCode])
+  @@index([schName])
+}

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "StudentRegistration" ADD COLUMN     "prcd" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN     "year" TEXT NOT NULL DEFAULT '2025/2026';

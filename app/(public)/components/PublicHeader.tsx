@@ -1,0 +1,40 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+
+const PublicHeader = () => {
+  return (
+    <header className="bg-primary text-primary-foreground sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-3 md:py-4 xl:px-8 2xl:px-12 max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px]">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 md:gap-4">
+            <div className="relative h-14 w-11 md:h-16 md:w-14 lg:h-18 lg:w-14 xl:h-20 xl:w-16 flex-shrink-0">
+              <Image
+                src="/delta-logo.png"
+                alt="Delta State Government Seal"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="border-l border-primary-foreground/30 pl-3 md:pl-4">
+              <p className="text-xs md:text-sm xl:text-base font-medium tracking-wide uppercase opacity-90">
+                Delta State Government
+              </p>
+              <h1 className="text-base md:text-lg lg:text-xl xl:text-2xl font-semibold leading-tight">
+                Ministry Of Secondary School Education
+              </h1>
+              <p className="text-xs md:text-sm xl:text-base opacity-80">
+                Official Portal
+              </p>
+            </div>
+          </Link>
+        </div>
+      </div>
+      <div className="h-0.5 bg-primary-foreground/20"></div>
+    </header>
+  );
+};
+
+export default PublicHeader;
