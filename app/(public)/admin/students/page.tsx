@@ -240,7 +240,7 @@ export default function Students() {
         schoolTypeCode, // schType (0 = Public, 1 = Private)
         student.schoolCode || "", // schcode
         student.lCode || "", // lgacode
-        "" // DATE OF BIRTH (empty like sample)
+        student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("en-GB") : "" // DATE OF BIRTH
       ];
       csvRows.push(row.join(","));
     });
