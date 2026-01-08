@@ -111,13 +111,29 @@ const PrimaryResult = () => {
       ? 'ISLAMIC RELIGIOUS STUDIES' 
       : resultData.rgstype === 'CRS' 
       ? 'CHRISTIAN RELIGIOUS STUDIES'
+      : resultData.rgstype === '1'
+      ? 'CHRISTIAN RELIGIOUS STUDIES'
+      : resultData.rgstype === '2'
+      ? 'ISLAMIC RELIGIOUS STUDIES'
       : 'RELIGIOUS STUDIES';
-    const subjects = [
-      { subject: 'ENGLISH STUDIES', grade: resultData.engGrd || 'N/A' },
-      { subject: 'MATHEMATICS', grade: resultData.aritGrd || 'N/A' },
-      { subject: 'GENERAL PAPER', grade: resultData.gpGrd || 'N/A' },
-      { subject: religiousSubject, grade: resultData.rgsGrd || 'N/A' },
+    
+    // Build subjects array dynamically - only include subjects with grades
+    const allSubjects = [
+      { subject: 'ENGLISH STUDIES', grade: resultData.engGrd },
+      { subject: 'MATHEMATICS', grade: resultData.mthGrd || resultData.aritGrd },
+      { subject: 'BASIC SCIENCE & TECHNOLOGY', grade: resultData.bstGrd },
+      { subject: 'GENERAL PAPER', grade: resultData.gpGrd },
+      { subject: religiousSubject, grade: resultData.rgsGrd },
+      { subject: 'HISTORY', grade: resultData.hstGrd },
+      { subject: 'ARABIC', grade: resultData.arbGrd },
+      { subject: 'CULTURAL & CREATIVE ARTS', grade: resultData.ccaGrd },
+      { subject: 'FRENCH', grade: resultData.freGrd },
+      { subject: 'NATIONAL VALUES', grade: resultData.nvsGrd },
+      { subject: 'LANGUAGE (VERNACULAR)', grade: resultData.llgGrd },
+      { subject: 'PRE-VOCATIONAL STUDIES', grade: resultData.pvsGrd },
+      { subject: 'BUSINESS STUDIES', grade: resultData.busGrd },
     ];
+    const subjects = allSubjects.filter(s => s.grade && s.grade !== 'N/A');
 
     const html = `<!doctype html>
 <html lang="en">
@@ -267,7 +283,7 @@ const PrimaryResult = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl">Primary Examination Result Verification</CardTitle>
+              <CardTitle className="text-lg md:text-xl">Secondary Examination Result Verification</CardTitle>
               <CardDescription>
                 Enter the required credentials to retrieve official examination results
               </CardDescription>
@@ -388,28 +404,90 @@ const PrimaryResult = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td className="px-3 py-2 border-b border-border">English Studies</td>
-                        <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.engGrd || 'N/A'}</td>
-                      </tr>
-                      <tr>
-                        <td className="px-3 py-2 border-b border-border">Mathematics</td>
-                        <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.aritGrd || 'N/A'}</td>
-                      </tr>
-                      <tr>
-                        <td className="px-3 py-2 border-b border-border">General Paper</td>
-                        <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.gpGrd || 'N/A'}</td>
-                      </tr>
-                      <tr>
-                        <td className="px-3 py-2 border-b border-border">
-                          {resultData.rgstype === 'IRS' 
-                            ? 'Islamic Religious Studies' 
-                            : resultData.rgstype === 'CRS' 
-                            ? 'Christian Religious Studies'
-                            : 'Religious Studies'}
-                        </td>
-                        <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.rgsGrd || 'N/A'}</td>
-                      </tr>
+                      {resultData.engGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">English Studies</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.engGrd}</td>
+                        </tr>
+                      )}
+                      {(resultData.mthGrd || resultData.aritGrd) && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Mathematics</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.mthGrd || resultData.aritGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.bstGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Basic Science & Technology</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.bstGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.gpGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">General Paper</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.gpGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.rgsGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">
+                            {resultData.rgstype === 'IRS' || resultData.rgstype === '2'
+                              ? 'Islamic Religious Studies' 
+                              : resultData.rgstype === 'CRS' || resultData.rgstype === '1'
+                              ? 'Christian Religious Studies'
+                              : 'Religious Studies'}
+                          </td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.rgsGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.hstGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">History</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.hstGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.arbGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Arabic</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.arbGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.ccaGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Cultural & Creative Arts</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.ccaGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.freGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">French</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.freGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.nvsGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">National Values</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.nvsGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.llgGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Language (Vernacular)</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.llgGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.pvsGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Pre-Vocational Studies</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.pvsGrd}</td>
+                        </tr>
+                      )}
+                      {resultData.busGrd && (
+                        <tr>
+                          <td className="px-3 py-2 border-b border-border">Business Studies</td>
+                          <td className="px-3 py-2 border-b border-border text-center font-semibold">{resultData.busGrd}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

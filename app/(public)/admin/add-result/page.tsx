@@ -1,32 +1,75 @@
 "use client"
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, useToast } from "@/hooks/use-toast";
 import { Upload, FileSpreadsheet, Loader2 } from "lucide-react";
+
+interface UploadProgress {
+  progress: number;
+  phase: string;
+  message: string;
+}
 
 const ResultFormContent = () => {
   const { addToast } = useToast();
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isUploadingCSV, setIsUploadingCSV] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
+    progress: 0,
+    phase: '',
+    message: '',
+  });
+
+  const validateAndSetFile = useCallback((file: File) => {
+    if (!file.name.endsWith('.csv')) {
+      addToast({
+        variant: "error",
+        title: "Invalid File",
+        description: "Please upload a CSV file.",
+        duration: 4000,
+      });
+      return;
+    }
+    setCsvFile(file);
+    addToast({
+      variant: "success",
+      title: "File Selected",
+      description: `${file.name} ready for upload.`,
+      duration: 3000,
+    });
+  }, [addToast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.name.endsWith('.csv')) {
-        addToast({
-          variant: "error",
-          title: "Invalid File",
-          description: "Please upload a CSV file.",
-          duration: 4000,
-        });
-        return;
-      }
-      setCsvFile(file);
+      validateAndSetFile(file);
     }
   };
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      validateAndSetFile(files[0]);
+    }
+  }, [validateAndSetFile]);
 
   const handleCSVUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,42 +85,86 @@ const ResultFormContent = () => {
     }
 
     setIsUploadingCSV(true);
+    setUploadProgress({ progress: 0, phase: 'starting', message: 'Preparing upload...' });
 
     try {
       const formData = new FormData();
       formData.append('file', csvFile);
 
+      // Use streaming for progress updates
       const response = await fetch('/api/results/bulk', {
         method: 'POST',
+        headers: {
+          'Accept': 'text/event-stream',
+        },
         body: formData,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to upload CSV');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload CSV');
       }
 
-      // Show success toast
-      addToast({
-        variant: "success",
-        title: "Upload Successful!",
-        description: `${data.message}. Total processed: ${data.totalProcessed}${data.errors ? `, Errors: ${data.errors.length}` : ''}`,
-        duration: 7000,
-      });
+      // Handle SSE stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      // Show errors if any
-      if (data.errors && data.errors.length > 0) {
-        const errorDetails = data.errors.slice(0, 5).map((err: any) => 
-          `Row ${err.row}: ${err.error}`
-        ).join('\n');
-        
+      if (!reader) {
+        throw new Error('Stream not available');
+      }
+
+      let finalData: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              setUploadProgress({
+                progress: data.progress || 0,
+                phase: data.phase || '',
+                message: data.message || '',
+              });
+
+              if (data.phase === 'complete') {
+                finalData = data;
+              }
+            } catch (parseError) {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      }
+
+      if (finalData) {
+        // Show success toast
         addToast({
-          variant: "error",
-          title: "Some Records Failed",
-          description: errorDetails + (data.errors.length > 5 ? `\n...and ${data.errors.length - 5} more errors` : ''),
-          duration: 10000,
+          variant: "success",
+          title: "Upload Successful!",
+          description: `${finalData.message}. Total processed: ${finalData.totalProcessed}${finalData.errors ? `, Errors: ${finalData.errors.length}` : ''}`,
+          duration: 7000,
         });
+
+        // Show errors if any
+        if (finalData.errors && finalData.errors.length > 0) {
+          const errorDetails = finalData.errors.slice(0, 5).map((err: any) => 
+            `Row ${err.row}: ${err.error}`
+          ).join('\n');
+          
+          addToast({
+            variant: "error",
+            title: "Some Records Failed",
+            description: errorDetails + (finalData.errors.length > 5 ? `\n...and ${finalData.errors.length - 5} more errors` : ''),
+            duration: 10000,
+          });
+        }
       }
 
       // Reset file input
@@ -93,6 +180,7 @@ const ResultFormContent = () => {
       });
     } finally {
       setIsUploadingCSV(false);
+      setUploadProgress({ progress: 0, phase: '', message: '' });
     }
   };
 
@@ -119,26 +207,52 @@ const ResultFormContent = () => {
               {/* CSV Format Info */}
               <div className="bg-muted p-4 rounded-lg">
                 <h3 className="font-semibold mb-2">Required CSV Format:</h3>
-                <code className="text-xs block overflow-x-auto">
-                  SESSIONYR, FNAME, MNAME, LNAME, DATEOFBIRTH, SEXCD, INSTITUTIONCD, SCHOOLCODE, LGACD, EXAMINATIONNO, ENG, ENGGRD, ARIT, ARITGRD, GP, GPGRD, RGS, RGSGRD, RGSTYPE, REMARK, ACCCESS_PIN
+                <code className="text-xs block overflow-x-auto whitespace-pre-wrap">
+                  SESSIONYR, FNAME, MNAME, LNAME, DATEOFBIRTH, SEXCD, INSTITUTIONCD, SCHOOLCOBE/SCHOOLCODE, LGACD, EXAMINATIONNO, ENG, ENGGRD, MTH, MTHGRD, BST, BSTGRD, RGS, RGSGRD, HST, HSTGRD, ARB, ARBGRD, CCA, CCAGRD, FRE, FREGRD, NVS, NVSGRD, LLG, LLGGRD, PVS, PVSGRD, BUS, BUSGRD, REMARK, ACCESS PIN, rgsType
                 </code>
               </div>
 
               <form onSubmit={handleCSVUpload} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="csv-file">Select CSV File</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="csv-file"
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileChange}
-                      className="cursor-pointer"
-                    />
-                    {csvFile && (
-                      <span className="text-sm text-muted-foreground">
-                        {csvFile.name}
-                      </span>
+                {/* Drag and Drop Zone */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                    isDragOver
+                      ? 'border-primary bg-primary/10'
+                      : csvFile
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
+                  onClick={() => document.getElementById('csv-file')?.click()}
+                >
+                  <input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    {csvFile ? (
+                      <>
+                        <FileSpreadsheet className="h-12 w-12 text-green-500" />
+                        <p className="font-medium text-green-600">{csvFile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Click or drop another file to replace
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className={`h-12 w-12 ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <p className="font-medium">
+                          {isDragOver ? 'Drop your CSV file here' : 'Drag & drop your CSV file here'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          or click to browse
+                        </p>
+                      </>
                     )}
                   </div>
                 </div>
@@ -165,23 +279,46 @@ const ResultFormContent = () => {
                 </div>
               </form>
 
-              {/* Loading Overlay */}
+              {/* Loading Overlay with Progress */}
               {isUploadingCSV && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
                   <div className="bg-card border rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
                     <div className="flex flex-col items-center space-y-4">
-                      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                      <div className="relative">
+                        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-lg font-bold text-primary">
+                            {uploadProgress.progress}%
+                          </span>
+                        </div>
+                      </div>
                       <div className="text-center space-y-2">
-                        <h3 className="text-lg font-semibold">Processing CSV File</h3>
+                        <h3 className="text-lg font-semibold">
+                          {uploadProgress.phase === 'validating' && 'Validating Records'}
+                          {uploadProgress.phase === 'inserting' && 'Saving to Database'}
+                          {uploadProgress.phase === 'complete' && 'Upload Complete!'}
+                          {(!uploadProgress.phase || uploadProgress.phase === 'starting') && 'Processing CSV File'}
+                        </h3>
                         <p className="text-sm text-muted-foreground">
-                          Please wait while we upload and process your examination results...
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          This may take a few moments depending on file size
+                          {uploadProgress.message || 'Please wait while we process your examination results...'}
                         </p>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                        <div className="bg-primary h-full animate-pulse" style={{ width: '100%' }} />
+                      <div className="w-full space-y-2">
+                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="bg-primary h-full transition-all duration-300 ease-out"
+                            style={{ width: `${uploadProgress.progress}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>
+                            {uploadProgress.phase === 'validating' && 'Phase 1/2: Validation'}
+                            {uploadProgress.phase === 'inserting' && 'Phase 2/2: Database Insert'}
+                            {uploadProgress.phase === 'complete' && 'Completed'}
+                            {(!uploadProgress.phase || uploadProgress.phase === 'starting') && 'Starting...'}
+                          </span>
+                          <span>{uploadProgress.progress}%</span>
+                        </div>
                       </div>
                     </div>
                   </div>

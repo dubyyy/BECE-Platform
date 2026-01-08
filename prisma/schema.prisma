@@ -76,6 +76,27 @@ model Result {
   sessionYr     String
   sexCd         String
   id            Int       @id @default(autoincrement())
+  // Additional subject fields
+  mth           Float?
+  mthGrd        String?
+  bst           Float?
+  bstGrd        String?
+  hst           Float?
+  hstGrd        String?
+  arb           Float?
+  arbGrd        String?
+  cca           Float?
+  ccaGrd        String?
+  fre           Float?
+  freGrd        String?
+  nvs           Float?
+  nvsGrd        String?
+  llg           Float?
+  llgGrd        String?
+  pvs           Float?
+  pvsGrd        String?
+  bus           Float?
+  busGrd        String?
 
   @@map("Result")
 }
