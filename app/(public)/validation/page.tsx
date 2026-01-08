@@ -2141,34 +2141,49 @@ const Validation = () => {
                           <div className="space-y-1">
                             <Label className="text-sm">Year 1</Label>
                             <Input
-                              placeholder="0-99"
+                              placeholder="1-100"
                               type="number"
-                              min="0"
-                              max="99"
+                              min="1"
+                              max="100"
                               value={scores.year1}
-                              onChange={(e) => updateEditModalScore('year1', e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || (Number(val) >= 1 && Number(val) <= 100)) {
+                                  updateEditModalScore('year1', val);
+                                }
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-sm">Year 2</Label>
                             <Input
-                              placeholder="0-99"
+                              placeholder="1-100"
                               type="number"
-                              min="0"
-                              max="99"
+                              min="1"
+                              max="100"
                               value={scores.year2}
-                              onChange={(e) => updateEditModalScore('year2', e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || (Number(val) >= 1 && Number(val) <= 100)) {
+                                  updateEditModalScore('year2', val);
+                                }
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-sm">Year 3</Label>
                             <Input
-                              placeholder="0-99"
+                              placeholder="1-100"
                               type="number"
-                              min="0"
-                              max="99"
+                              min="1"
+                              max="100"
                               value={scores.year3}
-                              onChange={(e) => updateEditModalScore('year3', e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || (Number(val) >= 1 && Number(val) <= 100)) {
+                                  updateEditModalScore('year3', val);
+                                }
+                              }}
                             />
                           </div>
                         </div>

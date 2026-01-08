@@ -11,6 +11,30 @@ interface JwtPayload {
   schoolName: string;
 }
 
+// Validate CA score is between 1-100 or empty
+function isValidCAScore(score: string | undefined | null): boolean {
+  if (!score || score === '' || score === '-') return true;
+  const num = Number(score);
+  return !isNaN(num) && num >= 1 && num <= 100;
+}
+
+// Validate all CA scores in the caScores object
+function validateCAScores(caScores: Record<string, { year1?: string; year2?: string; year3?: string }> | undefined): string | null {
+  if (!caScores) return null;
+  for (const [subject, scores] of Object.entries(caScores)) {
+    if (scores.year1 && !isValidCAScore(scores.year1)) {
+      return `Invalid CA score for ${subject} Year 1. Must be between 1-100.`;
+    }
+    if (scores.year2 && !isValidCAScore(scores.year2)) {
+      return `Invalid CA score for ${subject} Year 2. Must be between 1-100.`;
+    }
+    if (scores.year3 && !isValidCAScore(scores.year3)) {
+      return `Invalid CA score for ${subject} Year 3. Must be between 1-100.`;
+    }
+  }
+  return null;
+}
+
 export async function PATCH(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
@@ -42,6 +66,14 @@ export async function PATCH(req: NextRequest) {
         { error: 'Invalid request. Provide id and update payload.' },
         { status: 400 }
       );
+    }
+
+    // Validate CA scores (must be 1-100)
+    if (update.caScores) {
+      const validationError = validateCAScores(update.caScores);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
     }
 
     // Map nested client fields to flat DB columns if provided

@@ -22,8 +22,8 @@ const PortalPage = () => {
       variant: "primary" as const,
     },
     {
-      title: "Primary School Registration",
-      description: "Register new students for primary education",
+      title: "Secondary School Registration",
+      description: "Register new students for secondary education",
       icon: School,
       href: "/school-registration",
       variant: "primary" as const,
