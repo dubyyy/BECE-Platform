@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
       if (blockedResult && !isMasterPin) {
         return NextResponse.json(
-          { error: 'Access to this result has been disabled.' },
+          { error: 'Access to this result has been disabled contact the Ministry' },
           { status: 403 }
         );
       }
