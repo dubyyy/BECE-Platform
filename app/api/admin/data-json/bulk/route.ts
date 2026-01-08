@@ -1,17 +1,5 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-
-const DATA_FILE_PATH = path.join(process.cwd(), "data.json");
-
-interface SchoolEntry {
-  lgaCode: string;
-  lCode: string;
-  schCode: string;
-  progID: string;
-  schName: string;
-  id: string;
-}
+import { prisma } from "@/lib/prisma";
 
 interface BulkUploadRequest {
   schools: Array<{
@@ -37,7 +25,13 @@ export async function POST(request: Request) {
     }
 
     // Validate and filter valid entries
-    const validSchools: SchoolEntry[] = [];
+    const validSchools: Array<{
+      lgaCode: string;
+      lCode: string;
+      schCode: string;
+      progID: string;
+      schName: string;
+    }> = [];
     const errors: string[] = [];
 
     for (let i = 0; i < schools.length; i++) {
@@ -56,7 +50,6 @@ export async function POST(request: Request) {
         schCode: school.schCode.trim(),
         progID: school.progID.trim(),
         schName: school.schName.trim(),
-        id: "", // Will be assigned below
       });
     }
 
@@ -70,40 +63,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Read current data
-    let existingSchools: SchoolEntry[] = [];
-    try {
-      const fileContent = await fs.readFile(DATA_FILE_PATH, "utf-8");
-      existingSchools = JSON.parse(fileContent);
-    } catch (error) {
-      // If file doesn't exist or is empty, start with empty array
-      console.log("Creating new data.json file");
-      existingSchools = [];
-    }
-
-    // Generate IDs for new schools
-    let lastId = existingSchools.length > 0 
-      ? parseInt(existingSchools[existingSchools.length - 1].id) 
-      : 0;
-
-    validSchools.forEach((school) => {
-      lastId++;
-      school.id = lastId.toString();
+    // Use createMany with skipDuplicates to handle existing entries
+    const result = await prisma.schoolData.createMany({
+      data: validSchools,
+      skipDuplicates: true,
     });
 
-    // Merge and write
-    const updatedSchools = [...existingSchools, ...validSchools];
-
-    await fs.writeFile(
-      DATA_FILE_PATH,
-      JSON.stringify(updatedSchools),
-      "utf-8"
-    );
+    // Get total count
+    const total = await prisma.schoolData.count();
 
     return NextResponse.json({
       success: true,
-      count: validSchools.length,
-      total: updatedSchools.length,
+      count: result.count,
+      total,
       errors: errors.length > 0 ? errors : undefined
     }, { status: 201 });
 

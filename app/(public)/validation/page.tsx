@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Loader2, Edit, Printer, X, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Edit, Printer, X, Search, Trash2, Check, Save } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Link from 'next/link';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -125,6 +125,9 @@ const Validation = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [printType, setPrintType] = useState<string>("name");
   const [registrationModel, setRegistrationModel] = useState<string>("all");
+  const [editModalSubjects, setEditModalSubjects] = useState<string[]>([]);
+  const [editModalCaScores, setEditModalCaScores] = useState<CAScores>({});
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // Check for existing JWT token on component mount
   useEffect(() => {
@@ -243,8 +246,65 @@ const Validation = () => {
   const handleEdit = (student: Registration) => {
     setEditingStudent(student);
     setEditFormData({ ...student });
+    setEditModalSubjects(student.studentSubjects || []);
+    setEditModalCaScores(student.caScores || {});
     setIsEditModalOpen(true);
     setEditError("");
+  };
+
+  // Handle edit modal subject toggle
+  const handleEditModalSubjectToggle = (code: string) => {
+    setEditModalSubjects(prev => {
+      if (prev.includes(code)) {
+        // Remove subject and its CA scores
+        setEditModalCaScores(scores => {
+          const newScores = { ...scores };
+          delete newScores[code];
+          return newScores;
+        });
+        return prev.filter(c => c !== code);
+      } else {
+        return [...prev, code];
+      }
+    });
+  };
+
+  // Handle delete student
+  const handleDeleteStudent = async (student: Registration) => {
+    if (!confirm('Are you sure you want to delete this student registration? This action cannot be undone.')) return;
+    
+    setIsDeleting(student.id);
+    try {
+      const token = localStorage.getItem('schoolToken');
+      if (!token) {
+        setFetchError('Authentication token not found. Please login again.');
+        return;
+      }
+
+      const endpoint = student.source === 'post' ? '/api/school/post-registrations' : '/api/school/registrations';
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: student.id }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setFetchError(data.error || 'Failed to delete registration');
+        return;
+      }
+
+      // Remove from local state
+      setRegistrations(prev => prev.filter(r => !(r.id === student.id && r.source === student.source)));
+    } catch (e) {
+      console.error('Delete error:', e);
+      setFetchError('An error occurred while deleting. Please try again.');
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   const handleCloseEditModal = () => {
@@ -296,55 +356,35 @@ const Validation = () => {
       console.log('Updating student:', editFormData.id);
       console.log('Request data:', editFormData);
 
-      const response = await (editFormData.source === "post"
-        ? fetch(`/api/school/post-registrations`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              id: editFormData.id,
-              update: {
-                firstname: editFormData.firstname,
-                othername: editFormData.othername,
-                lastname: editFormData.lastname,
-                dateOfBirth: editFormData.dateOfBirth,
-                gender: editFormData.gender,
-                schoolType: editFormData.schoolType,
-                passport: editFormData.passport,
-                english: {
-                  term1: editFormData.englishTerm1,
-                  term2: editFormData.englishTerm2,
-                  term3: editFormData.englishTerm3,
-                },
-                arithmetic: {
-                  term1: editFormData.arithmeticTerm1,
-                  term2: editFormData.arithmeticTerm2,
-                  term3: editFormData.arithmeticTerm3,
-                },
-                general: {
-                  term1: editFormData.generalTerm1,
-                  term2: editFormData.generalTerm2,
-                  term3: editFormData.generalTerm3,
-                },
-                religious: {
-                  type: editFormData.religiousType,
-                  term1: editFormData.religiousTerm1,
-                  term2: editFormData.religiousTerm2,
-                  term3: editFormData.religiousTerm3,
-                },
-              },
-            }),
-          })
-        : fetch(`/api/school/registrations/${editFormData.id}`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(editFormData),
-          }));
+      // Prepare the update payload with dynamic caScores and studentSubjects
+      const updatePayload = {
+        firstname: editFormData.firstname,
+        othername: editFormData.othername,
+        lastname: editFormData.lastname,
+        dateOfBirth: editFormData.dateOfBirth,
+        gender: editFormData.gender,
+        schoolType: editFormData.schoolType,
+        passport: editFormData.passport,
+        caScores: editModalCaScores,
+        studentSubjects: editModalSubjects,
+        religious: editModalSubjects.includes('RGS') ? { type: editFormData.religiousType } : undefined,
+      };
+
+      const endpoint = editFormData.source === "post" 
+        ? '/api/school/post-registrations' 
+        : '/api/school/registrations';
+      
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editFormData.id,
+          update: updatePayload,
+        }),
+      });
 
       console.log('Response status:', response.status);
 
@@ -358,9 +398,14 @@ const Validation = () => {
         return;
       }
 
-      // Update the local registrations state
+      // Update the local registrations state with new caScores and studentSubjects
+      const updatedStudent = {
+        ...editFormData,
+        caScores: editModalCaScores,
+        studentSubjects: editModalSubjects,
+      };
       setRegistrations(prevRegs => 
-        prevRegs.map(reg => (reg.id === editFormData.id && reg.source === editFormData.source) ? editFormData : reg)
+        prevRegs.map(reg => (reg.id === editFormData.id && reg.source === editFormData.source) ? updatedStudent : reg)
       );
 
       console.log('Student updated successfully');
@@ -1827,15 +1872,31 @@ const Validation = () => {
                                 {new Date(student.createdAt).toLocaleDateString()}
                               </TableCell>
                               <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEdit(student)}
-                                  className="h-8 w-8 p-0"
-                                  title="Edit Student"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(student)}
+                                    className="h-8 w-8 p-0"
+                                    title="Edit Student"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteStudent(student)}
+                                    className="h-8 w-8 p-0"
+                                    title="Delete Student"
+                                    disabled={isDeleting === student.id}
+                                  >
+                                    {isDeleting === student.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    )}
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -1987,153 +2048,135 @@ const Validation = () => {
                 </div>
               </div>
 
-              {/* English Scores Section */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">English Scores</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-englishTerm1">Term 1</Label>
-                    <Input
-                      id="edit-englishTerm1"
-                      type="number"
-                      value={editFormData.englishTerm1}
-                      onChange={(e) => handleEditFormChange('englishTerm1', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-englishTerm2">Term 2</Label>
-                    <Input
-                      id="edit-englishTerm2"
-                      type="number"
-                      value={editFormData.englishTerm2}
-                      onChange={(e) => handleEditFormChange('englishTerm2', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-englishTerm3">Term 3</Label>
-                    <Input
-                      id="edit-englishTerm3"
-                      type="number"
-                      value={editFormData.englishTerm3}
-                      onChange={(e) => handleEditFormChange('englishTerm3', e.target.value)}
-                      required
-                    />
-                  </div>
+              {/* Subject Selection Section */}
+              <div className="space-y-4 pt-4 border-t">
+                <div>
+                  <h3 className="font-semibold text-lg">Examination Subjects</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Select/deselect subjects for this student
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {SUBJECTS.map((subject) => {
+                    const isSelected = editModalSubjects.includes(subject.code);
+                    return (
+                      <div
+                        key={subject.code}
+                        className={`
+                          flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all
+                          ${isSelected 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                          }
+                        `}
+                        onClick={() => handleEditModalSubjectToggle(subject.code)}
+                      >
+                        <div className={`size-4 shrink-0 rounded-[4px] border flex items-center justify-center ${isSelected ? "bg-primary border-primary text-white" : "border-input"}`}>
+                          {isSelected && <Check className="size-3" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium block truncate">
+                            {subject.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            ({subject.code})
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Arithmetic Scores Section */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Arithmetic Scores</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-arithmeticTerm1">Term 1</Label>
-                    <Input
-                      id="edit-arithmeticTerm1"
-                      type="number"
-                      value={editFormData.arithmeticTerm1}
-                      onChange={(e) => handleEditFormChange('arithmeticTerm1', e.target.value)}
-                      required
-                    />
+              {/* CA Scores for Selected Subjects */}
+              {editModalSubjects.length > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <h3 className="font-semibold text-lg">Continuous Assessment Scores</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Update CA scores for {editModalSubjects.length} selected subject{editModalSubjects.length !== 1 ? 's' : ''}
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-arithmeticTerm2">Term 2</Label>
-                    <Input
-                      id="edit-arithmeticTerm2"
-                      type="number"
-                      value={editFormData.arithmeticTerm2}
-                      onChange={(e) => handleEditFormChange('arithmeticTerm2', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-arithmeticTerm3">Term 3</Label>
-                    <Input
-                      id="edit-arithmeticTerm3"
-                      type="number"
-                      value={editFormData.arithmeticTerm3}
-                      onChange={(e) => handleEditFormChange('arithmeticTerm3', e.target.value)}
-                      required
-                    />
-                  </div>
+                  
+                  {editModalSubjects.map((subjectCode) => {
+                    const subject = SUBJECTS.find(s => s.code === subjectCode);
+                    if (!subject) return null;
+                    
+                    const scores = editModalCaScores[subjectCode] || { year1: '', year2: '', year3: '' };
+                    
+                    const updateEditModalScore = (year: 'year1' | 'year2' | 'year3', value: string) => {
+                      setEditModalCaScores(prev => ({
+                        ...prev,
+                        [subjectCode]: {
+                          year1: prev[subjectCode]?.year1 || '',
+                          year2: prev[subjectCode]?.year2 || '',
+                          year3: prev[subjectCode]?.year3 || '',
+                          [year]: value,
+                        }
+                      }));
+                    };
+                    
+                    return (
+                      <div key={subjectCode} className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <Label className="text-base font-medium">{subject.name}</Label>
+                          <span className="text-xs text-muted-foreground font-mono">({subjectCode})</span>
+                          {subjectCode === 'RGS' && (
+                            <Select 
+                              value={editFormData.religiousType || ""} 
+                              onValueChange={(value) => handleEditFormChange('religiousType', value)}
+                            >
+                              <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="islam">Islamic Studies</SelectItem>
+                                <SelectItem value="christian">Christian Religious Studies</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-sm">Year 1</Label>
+                            <Input
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              value={scores.year1}
+                              onChange={(e) => updateEditModalScore('year1', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-sm">Year 2</Label>
+                            <Input
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              value={scores.year2}
+                              onChange={(e) => updateEditModalScore('year2', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-sm">Year 3</Label>
+                            <Input
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              value={scores.year3}
+                              onChange={(e) => updateEditModalScore('year3', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-
-              {/* General Knowledge Scores Section */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">General Knowledge Scores</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-generalTerm1">Term 1</Label>
-                    <Input
-                      id="edit-generalTerm1"
-                      type="number"
-                      value={editFormData.generalTerm1}
-                      onChange={(e) => handleEditFormChange('generalTerm1', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-generalTerm2">Term 2</Label>
-                    <Input
-                      id="edit-generalTerm2"
-                      type="number"
-                      value={editFormData.generalTerm2}
-                      onChange={(e) => handleEditFormChange('generalTerm2', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-generalTerm3">Term 3</Label>
-                    <Input
-                      id="edit-generalTerm3"
-                      type="number"
-                      value={editFormData.generalTerm3}
-                      onChange={(e) => handleEditFormChange('generalTerm3', e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Religious Studies Scores Section */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Religious Studies Scores</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-religiousTerm1">Term 1</Label>
-                    <Input
-                      id="edit-religiousTerm1"
-                      type="number"
-                      value={editFormData.religiousTerm1}
-                      onChange={(e) => handleEditFormChange('religiousTerm1', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-religiousTerm2">Term 2</Label>
-                    <Input
-                      id="edit-religiousTerm2"
-                      type="number"
-                      value={editFormData.religiousTerm2}
-                      onChange={(e) => handleEditFormChange('religiousTerm2', e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-religiousTerm3">Term 3</Label>
-                    <Input
-                      id="edit-religiousTerm3"
-                      type="number"
-                      value={editFormData.religiousTerm3}
-                      onChange={(e) => handleEditFormChange('religiousTerm3', e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           )}
 

@@ -123,68 +123,120 @@ export default function Students() {
     }
 
     // Create CSV content with header and student data
-    // Excluded: s/n, rgstype, schtype, lgacode, schcode per user request
     const headers = [
-      "Year",
-      "PRCD",
-      "Student Number",
-      "Access Code",
+      "S/N",
+      "school_session",
+      "progID",
+      "Reg. No",
+      "ACCESSCODE",
+      "Surename",
+      "Other Name(s)",
       "First Name",
-      "Other Name",
-      "Last Name",
       "Gender",
-      "ENG1",
-      "ENG2",
-      "ENG3",
-      "ARIT1",
-      "ARIT2",
-      "ARIT3",
-      "GP1",
-      "GP2",
-      "GP3",
-      "RGS1",
-      "RGS2",
-      "RGS3",
+      "ARBY1",
+      "ARBY2",
+      "ARBY3",
+      "BUSY1",
+      "BUSY2",
+      "BUSY3",
+      "CCAY1",
+      "CCAY2",
+      "CCAY3",
+      "ENGY1",
+      "ENGY2",
+      "ENGY3",
+      "FREY1",
+      "FREY2",
+      "FREY3",
+      "HSTY1",
+      "HSTY2",
+      "HSTY3",
+      "LLGY1",
+      "LLGY2",
+      "LLGY3",
+      "MTHY1",
+      "MTHY2",
+      "MTHY3",
+      "NVSY1",
+      "NVSY2",
+      "NVSY3",
+      "PVSY1",
+      "PVSY2",
+      "PVSY3",
+      "RGSY1",
+      "RGSY2",
+      "RGSY3",
+      "TECY1",
+      "TECY2",
+      "TECY3",
       "rgsType",
       "schType",
       "schcode",
       "lgacode",
-      "Date of Birth"
+      "DATE OF BIRTH"
     ];
     const csvRows = [headers.join(",")];
 
-    safeStudents.forEach(student => {
-      // Map religious type to numeric values
+    safeStudents.forEach((student, index) => {
+      // Map religious type to numeric values (1 = Christian, 2 = Islam)
       const religiousTypeCode = student.religiousType?.toLowerCase() === "christian" ? "1" 
         : student.religiousType?.toLowerCase() === "islam" ? "2" 
         : "";
       
+      // Map school type to numeric values (0 = Public, 1 = Private)
+      const schoolTypeCode = student.schoolType?.toLowerCase() === "private" ? "1" : "0";
+      
       const row = [
-        student.year || "",
-        student.prcd || "",
-        student.studentNumber,
-        student.accCode,
-        `"${student.firstname}"`,
-        `"${student.othername || ""}"`,
-        `"${student.lastname}"`,
-        student.gender,
-        student.englishTerm1 || "",
-        student.englishTerm2 || "",
-        student.englishTerm3 || "",
-        student.arithmeticTerm1 || "",
-        student.arithmeticTerm2 || "",
-        student.arithmeticTerm3 || "",
-        student.generalTerm1 || "",
-        student.generalTerm2 || "",
-        student.generalTerm3 || "",
-        student.religiousTerm1 || "",
-        student.religiousTerm2 || "",
-        student.religiousTerm3 || "",
-        religiousTypeCode,
-        student.schoolType || "",
-        student.schoolCode || "",
-        student.lCode || "",
-        student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB') : ""
+        index + 1, // S/N
+        student.year || "", // school_session
+        student.prcd || "", // progID
+        student.studentNumber, // Reg. No
+        student.accCode, // ACCESSCODE
+        student.lastname, // Surename
+        student.othername || "", // Other Name(s)
+        student.firstname, // First Name
+        student.gender, // Gender
+        "", // ARBY1
+        "", // ARBY2
+        "", // ARBY3
+        "", // BUSY1
+        "", // BUSY2
+        "", // BUSY3
+        "", // CCAY1
+        "", // CCAY2
+        "", // CCAY3
+        student.englishTerm1 || "", // ENGY1
+        student.englishTerm2 || "", // ENGY2
+        student.englishTerm3 || "", // ENGY3
+        "", // FREY1
+        "", // FREY2
+        "", // FREY3
+        "", // HSTY1
+        "", // HSTY2
+        "", // HSTY3
+        "", // LLGY1
+        "", // LLGY2
+        "", // LLGY3
+        student.arithmeticTerm1 || "", // MTHY1
+        student.arithmeticTerm2 || "", // MTHY2
+        student.arithmeticTerm3 || "", // MTHY3
+        "", // NVSY1
+        "", // NVSY2
+        "", // NVSY3
+        student.generalTerm1 || "", // PVSY1
+        student.generalTerm2 || "", // PVSY2
+        student.generalTerm3 || "", // PVSY3
+        student.religiousTerm1 || "", // RGSY1
+        student.religiousTerm2 || "", // RGSY2
+        student.religiousTerm3 || "", // RGSY3
+        "", // TECY1
+        "", // TECY2
+        "", // TECY3
+        religiousTypeCode, // rgsType
+        schoolTypeCode, // schType (0 = Public, 1 = Private)
+        student.schoolCode || "", // schcode
+        student.lCode || "", // lgacode
+        "" // DATE OF BIRTH (empty like sample)
       ];
       csvRows.push(row.join(","));
     });

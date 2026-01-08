@@ -52,6 +52,43 @@ export async function PATCH(req: NextRequest) {
     if (typeof update.gender === 'string') data.gender = update.gender;
     if (typeof update.schoolType === 'string') data.schoolType = update.schoolType;
     if (typeof update.passport === 'string' || update.passport === null) data.passport = update.passport;
+    if (typeof update.dateOfBirth === 'string') data.dateOfBirth = update.dateOfBirth ? new Date(update.dateOfBirth) : null;
+    
+    // Handle dynamic CA scores and student subjects
+    if (update.caScores && typeof update.caScores === 'object') {
+      data.caScores = update.caScores;
+      // Also update legacy fields from caScores for backward compatibility
+      if (update.caScores.ENG) {
+        data.englishTerm1 = update.caScores.ENG.year1 || '-';
+        data.englishTerm2 = update.caScores.ENG.year2 || '-';
+        data.englishTerm3 = update.caScores.ENG.year3 || '-';
+      }
+      if (update.caScores.MTH) {
+        data.arithmeticTerm1 = update.caScores.MTH.year1 || '-';
+        data.arithmeticTerm2 = update.caScores.MTH.year2 || '-';
+        data.arithmeticTerm3 = update.caScores.MTH.year3 || '-';
+      }
+      if (update.caScores.BST) {
+        data.generalTerm1 = update.caScores.BST.year1 || '-';
+        data.generalTerm2 = update.caScores.BST.year2 || '-';
+        data.generalTerm3 = update.caScores.BST.year3 || '-';
+      }
+      if (update.caScores.RGS) {
+        data.religiousTerm1 = update.caScores.RGS.year1 || '-';
+        data.religiousTerm2 = update.caScores.RGS.year2 || '-';
+        data.religiousTerm3 = update.caScores.RGS.year3 || '-';
+      }
+    }
+    if (Array.isArray(update.studentSubjects)) {
+      data.studentSubjects = update.studentSubjects;
+    }
+    
+    // Handle religious type separately
+    if (update.religious && typeof update.religious.type === 'string') {
+      data.religiousType = update.religious.type;
+    }
+    
+    // Legacy field handling (for older clients)
     if (update.english) {
       if (typeof update.english.term1 === 'string') data.englishTerm1 = update.english.term1;
       if (typeof update.english.term2 === 'string') data.englishTerm2 = update.english.term2;
@@ -68,14 +105,10 @@ export async function PATCH(req: NextRequest) {
       if (typeof update.general.term3 === 'string') data.generalTerm3 = update.general.term3;
     }
     if (update.religious) {
-      if (typeof update.religious.type === 'string') data.religiousType = update.religious.type;
       if (typeof update.religious.term1 === 'string') data.religiousTerm1 = update.religious.term1;
       if (typeof update.religious.term2 === 'string') data.religiousTerm2 = update.religious.term2;
       if (typeof update.religious.term3 === 'string') data.religiousTerm3 = update.religious.term3;
     }
-    // Handle new dynamic format
-    if (update.caScores) data.caScores = update.caScores;
-    if (Array.isArray(update.studentSubjects)) data.studentSubjects = update.studentSubjects;
 
     const result = await prisma.postRegistration.updateMany({
       where: { id, schoolId: decoded.schoolId },

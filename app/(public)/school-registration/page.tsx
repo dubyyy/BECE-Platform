@@ -154,6 +154,13 @@ const SchoolRegistration = () => {
   const [showDuplicateDialog, setShowDuplicateDialog] = useState<boolean>(false);
   const [duplicateNames, setDuplicateNames] = useState<Array<{firstname: string, lastname: string, othername: string, studentNumber: string}>>([]);
   const [pendingRegistration, setPendingRegistration] = useState<Registration | null>(null);
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [editModalData, setEditModalData] = useState<Registration | null>(null);
+  const [editModalSubjects, setEditModalSubjects] = useState<string[]>([]);
+  const [editModalCaScores, setEditModalCaScores] = useState<CAScores>({});
+  const [editModalReligiousType, setEditModalReligiousType] = useState<string>("");
+  const [editModalImage, setEditModalImage] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   // Check registration status from server
   const checkRegistrationStatus = async (schoolId: string) => {
@@ -772,6 +779,147 @@ const SchoolRegistration = () => {
     }
   };
 
+  // Open edit modal with registration data
+  const openEditModal = (reg: Registration) => {
+    setEditModalData({ ...reg });
+    setEditModalSubjects(reg.studentSubjects || []);
+    setEditModalCaScores(reg.caScores || {});
+    setEditModalReligiousType(reg.religious?.type || "");
+    setEditModalImage(reg.passport);
+    setShowEditModal(true);
+  };
+
+  // Handle edit modal subject toggle
+  const handleEditModalSubjectToggle = (code: string) => {
+    setEditModalSubjects(prev => {
+      if (prev.includes(code)) {
+        // Remove subject and its CA scores
+        setEditModalCaScores(scores => {
+          const newScores = { ...scores };
+          delete newScores[code];
+          return newScores;
+        });
+        return prev.filter(c => c !== code);
+      } else {
+        return [...prev, code];
+      }
+    });
+  };
+
+  // Handle edit modal image change
+  const handleEditModalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditModalImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Save edit modal changes
+  const handleSaveEditModal = async () => {
+    if (!editModalData) return;
+    
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('schoolToken');
+      if (!token) {
+        setSaveMessage({ type: 'error', text: 'Authentication token not found. Please login again.' });
+        return;
+      }
+
+      // Determine the actual ID (handle post-registration prefix)
+      const actualId = String(editModalData.id).startsWith('post-') 
+        ? String(editModalData.id).replace('post-', '') 
+        : editModalData.id;
+      const isPostReg = String(editModalData.id).startsWith('post-');
+
+      const update = {
+        firstname: editModalData.firstname,
+        othername: editModalData.othername,
+        lastname: editModalData.lastname,
+        dateOfBirth: editModalData.dateOfBirth,
+        gender: editModalData.gender,
+        schoolType: editModalData.schoolType,
+        passport: editModalImage,
+        caScores: editModalCaScores,
+        studentSubjects: editModalSubjects,
+        religious: editModalSubjects.includes('RGS') ? { type: editModalReligiousType } : undefined,
+      };
+
+      const endpoint = isPostReg ? '/api/school/post-registrations' : '/api/school/registrations';
+      const res = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: actualId, update }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveMessage({ type: 'error', text: data.error || 'Failed to update registration' });
+        return;
+      }
+
+      setSaveMessage({ type: 'success', text: 'Registration updated successfully.' });
+      setShowEditModal(false);
+      setEditModalData(null);
+      await loadRegistrationsFromServer();
+      setTimeout(() => setSaveMessage(null), 4000);
+    } catch (e) {
+      console.error('Edit modal save error:', e);
+      setSaveMessage({ type: 'error', text: 'An error occurred while updating. Please try again.' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle delete student
+  const handleDeleteStudent = async (reg: Registration) => {
+    if (!confirm('Are you sure you want to delete this student registration? This action cannot be undone.')) return;
+    
+    try {
+      const token = localStorage.getItem('schoolToken');
+      if (!token) {
+        setSaveMessage({ type: 'error', text: 'Authentication token not found. Please login again.' });
+        return;
+      }
+
+      // Determine the actual ID (handle post-registration prefix)
+      const actualId = String(reg.id).startsWith('post-') 
+        ? String(reg.id).replace('post-', '') 
+        : reg.id;
+      const isPostReg = String(reg.id).startsWith('post-');
+
+      const endpoint = isPostReg ? '/api/school/post-registrations' : '/api/school/registrations';
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: actualId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveMessage({ type: 'error', text: data.error || 'Failed to delete registration' });
+        return;
+      }
+
+      setSaveMessage({ type: 'success', text: 'Registration deleted successfully.' });
+      await loadRegistrationsFromServer();
+      setTimeout(() => setSaveMessage(null), 4000);
+    } catch (e) {
+      console.error('Delete error:', e);
+      setSaveMessage({ type: 'error', text: 'An error occurred while deleting. Please try again.' });
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1218,9 +1366,9 @@ const SchoolRegistration = () => {
                     })}
                   </div>
                   
-                  {studentSubjects.length === 0 && (
+                  {studentSubjects.length < 6 && (
                     <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                      Please select at least one examination subject for this student.
+                      Please select at least 6 examination subjects for this student. ({studentSubjects.length}/6 selected)
                     </p>
                   )}
                 </div>
@@ -1336,7 +1484,7 @@ const SchoolRegistration = () => {
                     firstname.trim() === "" ||
                     gender === "" ||
                     schoolType === "" ||
-                    studentSubjects.length === 0 ||
+                    studentSubjects.length < 6 ||
                     (studentSubjects.includes('RGS') && religiousType === "") ||
                     selectedImage === null ||
                     !studentSubjects.every(code => {
@@ -1465,11 +1613,7 @@ const SchoolRegistration = () => {
                       {registrations
                         .slice()
                         .sort((a, b) => a.studentNumber.localeCompare(b.studentNumber))
-                        .map((reg) => {
-                        const isEditing = editingId === reg.id;
-                        const currentData = isEditing && editData ? editData : reg;
-                        
-                        return (
+                        .map((reg) => (
                           <TableRow key={reg.id}>
                             <TableCell>
                               {reg.passport ? (
@@ -1499,58 +1643,13 @@ const SchoolRegistration = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {isEditing ? (
-                                <div className="space-y-1">
-                                  <Input
-                                    value={currentData.firstname}
-                                    onChange={(e) => setEditData({...currentData, firstname: e.target.value})}
-                                    className="h-8"
-                                    placeholder="First name"
-                                  />
-                                  <Input
-                                    value={currentData.othername}
-                                    onChange={(e) => setEditData({...currentData, othername: e.target.value})}
-                                    className="h-8"
-                                    placeholder="Other name"
-                                  />
-                                  <Input
-                                    value={currentData.lastname}
-                                    onChange={(e) => setEditData({...currentData, lastname: e.target.value})}
-                                    className="h-8"
-                                    placeholder="Last name"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="font-medium">{reg.lastname} {reg.othername} {reg.firstname}</div>
-                              )}
+                              <div className="font-medium">{reg.lastname} {reg.othername} {reg.firstname}</div>
                             </TableCell>
                             <TableCell>
-                              {isEditing ? (
-                                <select
-                                  value={currentData.gender}
-                                  onChange={(e) => setEditData({...currentData, gender: e.target.value})}
-                                  className="h-8 w-[100px] rounded-md border border-input bg-transparent px-2 py-1 text-sm"
-                                >
-                                  <option value="male">Male</option>
-                                  <option value="female">Female</option>
-                                </select>
-                              ) : (
-                                <span className="capitalize">{reg.gender}</span>
-                              )}
+                              <span className="capitalize">{reg.gender}</span>
                             </TableCell>
                             <TableCell>
-                              {isEditing ? (
-                                <select
-                                  value={currentData.schoolType}
-                                  onChange={(e) => setEditData({...currentData, schoolType: e.target.value})}
-                                  className="h-8 w-[120px] rounded-md border border-input bg-transparent px-2 py-1 text-sm"
-                                >
-                                  <option value="public">Public</option>
-                                  <option value="private">Private</option>
-                                </select>
-                              ) : (
-                                <span className="capitalize">{reg.schoolType}</span>
-                              )}
+                              <span className="capitalize">{reg.schoolType}</span>
                             </TableCell>
                             {/* Dynamic CA Scores Cell */}
                             <TableCell>
@@ -1588,119 +1687,26 @@ const SchoolRegistration = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {isEditing ? (
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={async () => {
-                                      try {
-                                        const token = localStorage.getItem('schoolToken');
-                                        if (!token) {
-                                          setSaveMessage({ type: 'error', text: 'Authentication token not found. Please login again.' });
-                                          return;
-                                        }
-                                        const update = {
-                                          firstname: editData!.firstname,
-                                          othername: editData!.othername,
-                                          lastname: editData!.lastname,
-                                          gender: editData!.gender,
-                                          schoolType: editData!.schoolType,
-                                          passport: editData!.passport,
-                                          caScores: editData!.caScores,
-                                          studentSubjects: editData!.studentSubjects,
-                                          religious: editData!.religious,
-                                        };
-                                        const res = await fetch('/api/school/registrations', {
-                                          method: 'PATCH',
-                                          headers: {
-                                            'Content-Type': 'application/json',
-                                            'Authorization': `Bearer ${token}`,
-                                          },
-                                          body: JSON.stringify({ id: reg.id, update }),
-                                        });
-                                        const data = await res.json();
-                                        if (!res.ok) {
-                                          setSaveMessage({ type: 'error', text: data.error || 'Failed to update registration' });
-                                          return;
-                                        }
-                                        setSaveMessage({ type: 'success', text: 'Registration updated successfully.' });
-                                        setEditingId(null);
-                                        setEditData(null);
-                                        await loadRegistrationsFromServer();
-                                        setTimeout(() => setSaveMessage(null), 4000);
-                                      } catch (e) {
-                                        console.error('Inline update error:', e);
-                                        setSaveMessage({ type: 'error', text: 'An error occurred while updating. Please try again.' });
-                                      }
-                                    }}
-                                  >
-                                    <Save className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setEditingId(null);
-                                      setEditData(null);
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setEditingId(reg.id);
-                                      setEditData(reg);
-                                    }}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={async () => {
-                                      if (!confirm('Are you sure you want to delete this student registration?')) return;
-                                      try {
-                                        const token = localStorage.getItem('schoolToken');
-                                        if (!token) {
-                                          setSaveMessage({ type: 'error', text: 'Authentication token not found. Please login again.' });
-                                          return;
-                                        }
-                                        const res = await fetch('/api/school/registrations', {
-                                          method: 'DELETE',
-                                          headers: {
-                                            'Content-Type': 'application/json',
-                                            'Authorization': `Bearer ${token}`,
-                                          },
-                                          body: JSON.stringify({ id: reg.id }),
-                                        });
-                                        const data = await res.json();
-                                        if (!res.ok) {
-                                          setSaveMessage({ type: 'error', text: data.error || 'Failed to delete registration' });
-                                          return;
-                                        }
-                                        setSaveMessage({ type: 'success', text: 'Registration deleted successfully.' });
-                                        await loadRegistrationsFromServer();
-                                        setTimeout(() => setSaveMessage(null), 4000);
-                                      } catch (e) {
-                                        console.error('Inline delete error:', e);
-                                        setSaveMessage({ type: 'error', text: 'An error occurred while deleting. Please try again.' });
-                                      }
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              )}
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openEditModal(reg)}
+                                  title="Edit all fields"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteStudent(reg)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
-                        );
-                      })}
+                        ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -1763,6 +1769,277 @@ const SchoolRegistration = () => {
             >
               Yes, Continue
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Comprehensive Edit Student Modal */}
+      <AlertDialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <AlertDialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold">
+              Edit Student Registration
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Update student information. All fields can be modified.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {editModalData && (
+            <div className="space-y-6 py-4">
+              {/* Student Number (Read-only) */}
+              <div className="p-3 bg-muted rounded-lg">
+                <Label className="text-sm text-muted-foreground">Student Number</Label>
+                <p className="font-mono font-semibold">{editModalData.studentNumber}</p>
+              </div>
+
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastname">Lastname/Surname</Label>
+                  <Input
+                    id="edit-lastname"
+                    value={editModalData.lastname}
+                    onChange={(e) => setEditModalData({...editModalData, lastname: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-othername">Other Name</Label>
+                  <Input
+                    id="edit-othername"
+                    value={editModalData.othername}
+                    onChange={(e) => setEditModalData({...editModalData, othername: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstname">First Name</Label>
+                  <Input
+                    id="edit-firstname"
+                    value={editModalData.firstname}
+                    onChange={(e) => setEditModalData({...editModalData, firstname: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              {/* Date of Birth */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-dob">Date of Birth</Label>
+                <Input
+                  id="edit-dob"
+                  type="date"
+                  value={editModalData.dateOfBirth || ''}
+                  onChange={(e) => setEditModalData({...editModalData, dateOfBirth: e.target.value})}
+                />
+              </div>
+
+              {/* Gender and School Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-gender">Gender</Label>
+                  <select
+                    id="edit-gender"
+                    value={editModalData.gender}
+                    onChange={(e) => setEditModalData({...editModalData, gender: e.target.value})}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-schoolType">School Type</Label>
+                  <select
+                    id="edit-schoolType"
+                    value={editModalData.schoolType}
+                    onChange={(e) => setEditModalData({...editModalData, schoolType: e.target.value})}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="public">Public School</option>
+                    <option value="private">Private School</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Passport Photo */}
+              <div className="space-y-2">
+                <Label>Passport Photo</Label>
+                <div className="flex items-center gap-4">
+                  {editModalImage && (
+                    <div className="relative w-20 h-20 border rounded-lg overflow-hidden">
+                      <img
+                        src={editModalImage}
+                        alt="Current passport"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditModalImageChange}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Upload a new photo to replace the current one</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subject Selection */}
+              <div className="space-y-4 pt-4 border-t">
+                <div>
+                  <h3 className="text-lg font-semibold">Examination Subjects</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Select/deselect subjects for this student
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {SUBJECTS.map((subject) => {
+                    const isSelected = editModalSubjects.includes(subject.code);
+                    return (
+                      <div
+                        key={subject.code}
+                        className={`
+                          flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all
+                          ${isSelected 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                          }
+                        `}
+                        onClick={() => handleEditModalSubjectToggle(subject.code)}
+                      >
+                        <div className={`size-4 shrink-0 rounded-[4px] border flex items-center justify-center ${isSelected ? "bg-primary border-primary text-white" : "border-input"}`}>
+                          {isSelected && <Check className="size-3" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium block truncate">
+                            {subject.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            ({subject.code})
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* CA Scores for Selected Subjects */}
+              {editModalSubjects.length > 0 && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <h3 className="text-lg font-semibold">Continuous Assessment Scores</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Update CA scores for {editModalSubjects.length} selected subject{editModalSubjects.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  
+                  {editModalSubjects.map((subjectCode) => {
+                    const subject = SUBJECTS.find(s => s.code === subjectCode);
+                    if (!subject) return null;
+                    
+                    const scores = editModalCaScores[subjectCode] || { year1: '', year2: '', year3: '' };
+                    
+                    const updateEditModalScore = (year: 'year1' | 'year2' | 'year3', value: string) => {
+                      setEditModalCaScores(prev => ({
+                        ...prev,
+                        [subjectCode]: {
+                          year1: prev[subjectCode]?.year1 || '',
+                          year2: prev[subjectCode]?.year2 || '',
+                          year3: prev[subjectCode]?.year3 || '',
+                          [year]: value,
+                        }
+                      }));
+                    };
+                    
+                    return (
+                      <div key={subjectCode} className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <Label className="text-base font-medium">{subject.name}</Label>
+                          <span className="text-xs text-muted-foreground font-mono">({subjectCode})</span>
+                          {subjectCode === 'RGS' && (
+                            <select
+                              value={editModalReligiousType}
+                              onChange={(e) => setEditModalReligiousType(e.target.value)}
+                              className="flex h-9 w-[200px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <option value="">Select type</option>
+                              <option value="islam">Islamic Studies</option>
+                              <option value="christian">Christian Religious Studies</option>
+                            </select>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-sm">Year 1</Label>
+                            <Input
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              value={scores.year1}
+                              onChange={(e) => updateEditModalScore('year1', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-sm">Year 2</Label>
+                            <Input
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              value={scores.year2}
+                              onChange={(e) => updateEditModalScore('year2', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-sm">Year 3</Label>
+                            <Input
+                              placeholder="0-99"
+                              type="number"
+                              min="0"
+                              max="99"
+                              value={scores.year3}
+                              onChange={(e) => updateEditModalScore('year3', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowEditModal(false);
+                setEditModalData(null);
+              }}
+              disabled={isUpdating}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              onClick={handleSaveEditModal}
+              disabled={isUpdating || !editModalData}
+            >
+              {isUpdating ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
