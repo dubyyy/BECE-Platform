@@ -264,6 +264,10 @@ export async function GET(request: NextRequest) {
         religiousTerm2: student.religiousTerm2,
         religiousTerm3: student.religiousTerm3,
         
+        // Dynamic subjects
+        caScores: student.caScores,
+        studentSubjects: student.studentSubjects,
+        
         // Year and PRCD
         prcd: student.prcd,
         year: student.year,

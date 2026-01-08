@@ -46,6 +46,10 @@ interface Student {
   religiousTerm2: string | null;
   religiousTerm3: string | null;
   
+  // Dynamic subjects
+  caScores: Record<string, { term1?: string; term2?: string; term3?: string }> | null;
+  studentSubjects: string[];
+  
   // Additional info
   lga: string;
   lgaCode?: string;
@@ -189,49 +193,49 @@ export default function Students() {
       const row = [
         index + 1, // S/N
         student.year || "", // school_session
-        student.prcd || "", // progID
+        2, // progID
         student.studentNumber, // Reg. No
         student.accCode, // ACCESSCODE
         student.lastname, // Surename
         student.othername || "", // Other Name(s)
         student.firstname, // First Name
         student.gender, // Gender
-        "", // ARBY1
-        "", // ARBY2
-        "", // ARBY3
-        "", // BUSY1
-        "", // BUSY2
-        "", // BUSY3
-        "", // CCAY1
-        "", // CCAY2
-        "", // CCAY3
-        student.englishTerm1 || "", // ENGY1
-        student.englishTerm2 || "", // ENGY2
-        student.englishTerm3 || "", // ENGY3
-        "", // FREY1
-        "", // FREY2
-        "", // FREY3
-        "", // HSTY1
-        "", // HSTY2
-        "", // HSTY3
-        "", // LLGY1
-        "", // LLGY2
-        "", // LLGY3
-        student.arithmeticTerm1 || "", // MTHY1
-        student.arithmeticTerm2 || "", // MTHY2
-        student.arithmeticTerm3 || "", // MTHY3
-        "", // NVSY1
-        "", // NVSY2
-        "", // NVSY3
-        student.generalTerm1 || "", // PVSY1
-        student.generalTerm2 || "", // PVSY2
-        student.generalTerm3 || "", // PVSY3
-        student.religiousTerm1 || "", // RGSY1
-        student.religiousTerm2 || "", // RGSY2
-        student.religiousTerm3 || "", // RGSY3
-        "", // TECY1
-        "", // TECY2
-        "", // TECY3
+        student.caScores?.ARB?.term1 || "", // ARBY1
+        student.caScores?.ARB?.term2 || "", // ARBY2
+        student.caScores?.ARB?.term3 || "", // ARBY3
+        student.caScores?.BUS?.term1 || "", // BUSY1
+        student.caScores?.BUS?.term2 || "", // BUSY2
+        student.caScores?.BUS?.term3 || "", // BUSY3
+        student.caScores?.CCA?.term1 || "", // CCAY1
+        student.caScores?.CCA?.term2 || "", // CCAY2
+        student.caScores?.CCA?.term3 || "", // CCAY3
+        student.englishTerm1 || student.caScores?.ENG?.term1 || "", // ENGY1
+        student.englishTerm2 || student.caScores?.ENG?.term2 || "", // ENGY2
+        student.englishTerm3 || student.caScores?.ENG?.term3 || "", // ENGY3
+        student.caScores?.FRE?.term1 || "", // FREY1
+        student.caScores?.FRE?.term2 || "", // FREY2
+        student.caScores?.FRE?.term3 || "", // FREY3
+        student.caScores?.HST?.term1 || "", // HSTY1
+        student.caScores?.HST?.term2 || "", // HSTY2
+        student.caScores?.HST?.term3 || "", // HSTY3
+        student.caScores?.LLG?.term1 || "", // LLGY1
+        student.caScores?.LLG?.term2 || "", // LLGY2
+        student.caScores?.LLG?.term3 || "", // LLGY3
+        student.arithmeticTerm1 || student.caScores?.MTH?.term1 || "", // MTHY1
+        student.arithmeticTerm2 || student.caScores?.MTH?.term2 || "", // MTHY2
+        student.arithmeticTerm3 || student.caScores?.MTH?.term3 || "", // MTHY3
+        student.caScores?.NVS?.term1 || "", // NVSY1
+        student.caScores?.NVS?.term2 || "", // NVSY2
+        student.caScores?.NVS?.term3 || "", // NVSY3
+        student.generalTerm1 || student.caScores?.PVS?.term1 || "", // PVSY1
+        student.generalTerm2 || student.caScores?.PVS?.term2 || "", // PVSY2
+        student.generalTerm3 || student.caScores?.PVS?.term3 || "", // PVSY3
+        student.religiousTerm1 || student.caScores?.RGS?.term1 || "", // RGSY1
+        student.religiousTerm2 || student.caScores?.RGS?.term2 || "", // RGSY2
+        student.religiousTerm3 || student.caScores?.RGS?.term3 || "", // RGSY3
+        student.caScores?.TEC?.term1 || "", // TECY1
+        student.caScores?.TEC?.term2 || "", // TECY2
+        student.caScores?.TEC?.term3 || "", // TECY3
         religiousTypeCode, // rgsType
         schoolTypeCode, // schType (0 = Public, 1 = Private)
         student.schoolCode || "", // schcode
@@ -459,7 +463,7 @@ export default function Students() {
           ) : (
             <div className="overflow-x-auto w-full" style={{ maxWidth: '100%' }}>
               <div className="inline-block min-w-full align-middle">
-                <Table className="w-full table-fixed text-xs sm:text-sm" style={{ minWidth: '1800px' }}>
+                <Table className="w-full table-fixed text-xs sm:text-sm" style={{ minWidth: '3200px' }}>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[120px] border-r">Year</TableHead>
@@ -473,10 +477,18 @@ export default function Students() {
                       <TableHead>Last Name</TableHead>
                       <TableHead>Gender</TableHead>
                       <TableHead>School Type</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">Arabic</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">Business</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">CCA</TableHead>
                       <TableHead colSpan={3} className="text-center border-l-2">English</TableHead>
-                      <TableHead colSpan={3} className="text-center border-l-2">Arithmetic</TableHead>
-                      <TableHead colSpan={3} className="text-center border-l-2">General Paper</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">French</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">History</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">Local Lang.</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">Math</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">NVS</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">Gen. Paper</TableHead>
                       <TableHead colSpan={4} className="text-center border-l-2">Religious Studies</TableHead>
+                      <TableHead colSpan={3} className="text-center border-l-2">Technology</TableHead>
                     </TableRow>
                     <TableRow>
                       <TableHead className="border-r"></TableHead>
@@ -490,19 +502,55 @@ export default function Students() {
                       <TableHead></TableHead>
                       <TableHead></TableHead>
                       <TableHead></TableHead>
-                      <TableHead className="text-center text-xs border-l-2">Term 1</TableHead>
-                      <TableHead className="text-center text-xs">Term 2</TableHead>
-                      <TableHead className="text-center text-xs">Term 3</TableHead>
-                      <TableHead className="text-center text-xs border-l-2">Term 1</TableHead>
-                      <TableHead className="text-center text-xs">Term 2</TableHead>
-                      <TableHead className="text-center text-xs">Term 3</TableHead>
-                      <TableHead className="text-center text-xs border-l-2">Term 1</TableHead>
-                      <TableHead className="text-center text-xs">Term 2</TableHead>
-                      <TableHead className="text-center text-xs">Term 3</TableHead>
+                      {/* Arabic */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* Business */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* CCA */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* English */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* French */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* History */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* Local Language */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* Math */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* NVS */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* General Paper */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* Religious Studies */}
                       <TableHead className="text-center text-xs border-l-2">Type</TableHead>
-                      <TableHead className="text-center text-xs">Term 1</TableHead>
-                      <TableHead className="text-center text-xs">Term 2</TableHead>
-                      <TableHead className="text-center text-xs">Term 3</TableHead>
+                      <TableHead className="text-center text-xs">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
+                      {/* Technology */}
+                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
+                      <TableHead className="text-center text-xs">T2</TableHead>
+                      <TableHead className="text-center text-xs">T3</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -513,7 +561,7 @@ export default function Students() {
                       return (
                         <TableRow key={student.id} className="group hover:bg-muted/50">
                           <TableCell className="border-r">{student.year || "2025/2026"}</TableCell>
-                          <TableCell className="border-r-2">{student.prcd || 1}</TableCell>
+                          <TableCell className="border-r-2">2</TableCell>
                           <TableCell className="sticky left-0 bg-background group-hover:bg-muted/50 z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                             <Avatar className="h-10 w-10">
                               <AvatarImage 
@@ -545,26 +593,66 @@ export default function Students() {
                           <TableCell>{student.gender}</TableCell>
                           <TableCell>{student.schoolType}</TableCell>
                           
+                          {/* Arabic scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.ARB?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.ARB?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.ARB?.term3 || "-"}</TableCell>
+                          
+                          {/* Business Studies scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.BUS?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.BUS?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.BUS?.term3 || "-"}</TableCell>
+                          
+                          {/* CCA scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.CCA?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.CCA?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.CCA?.term3 || "-"}</TableCell>
+                          
                           {/* English scores */}
-                          <TableCell className="text-center border-l-2">{student.englishTerm1 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.englishTerm2 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.englishTerm3 || "-"}</TableCell>
+                          <TableCell className="text-center border-l-2">{student.englishTerm1 || student.caScores?.ENG?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.englishTerm2 || student.caScores?.ENG?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.englishTerm3 || student.caScores?.ENG?.term3 || "-"}</TableCell>
                           
-                          {/* Arithmetic scores */}
-                          <TableCell className="text-center border-l-2">{student.arithmeticTerm1 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.arithmeticTerm2 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.arithmeticTerm3 || "-"}</TableCell>
+                          {/* French scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.FRE?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.FRE?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.FRE?.term3 || "-"}</TableCell>
                           
-                          {/* General Paper scores */}
-                          <TableCell className="text-center border-l-2">{student.generalTerm1 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.generalTerm2 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.generalTerm3 || "-"}</TableCell>
+                          {/* History scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.HST?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.HST?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.HST?.term3 || "-"}</TableCell>
+                          
+                          {/* Local Language scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.LLG?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.LLG?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.LLG?.term3 || "-"}</TableCell>
+                          
+                          {/* Math/Arithmetic scores */}
+                          <TableCell className="text-center border-l-2">{student.arithmeticTerm1 || student.caScores?.MTH?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.arithmeticTerm2 || student.caScores?.MTH?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.arithmeticTerm3 || student.caScores?.MTH?.term3 || "-"}</TableCell>
+                          
+                          {/* NVS scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.NVS?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.NVS?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.NVS?.term3 || "-"}</TableCell>
+                          
+                          {/* General Paper/PVS scores */}
+                          <TableCell className="text-center border-l-2">{student.generalTerm1 || student.caScores?.PVS?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.generalTerm2 || student.caScores?.PVS?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.generalTerm3 || student.caScores?.PVS?.term3 || "-"}</TableCell>
                           
                           {/* Religious Studies */}
                           <TableCell className="text-center border-l-2 text-xs">{student.religiousType || "-"}</TableCell>
-                          <TableCell className="text-center">{student.religiousTerm1 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.religiousTerm2 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.religiousTerm3 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.religiousTerm1 || student.caScores?.RGS?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.religiousTerm2 || student.caScores?.RGS?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.religiousTerm3 || student.caScores?.RGS?.term3 || "-"}</TableCell>
+                          
+                          {/* Technology scores */}
+                          <TableCell className="text-center border-l-2">{student.caScores?.TEC?.term1 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.TEC?.term2 || "-"}</TableCell>
+                          <TableCell className="text-center">{student.caScores?.TEC?.term3 || "-"}</TableCell>
                         </TableRow>
                       );
                     })}
