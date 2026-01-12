@@ -9,7 +9,7 @@ import {
 const Index = () => {
   const publicServices = [
     {
-      title: "Check BECE Result",
+      title: "Check BECE ResultAA",
       description: "Access and verify official Basic Education Certificate Examination results and certificates",
       icon: FileText,
       href: "/primary-result",
