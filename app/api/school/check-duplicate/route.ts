@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -59,8 +59,6 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (const student of students as StudentToCheck[]) {
-      const normalizeStr = (s: string) => s.trim().toLowerCase();
-
       // Check in StudentRegistration
       const existingStudent = await prisma.studentRegistration.findFirst({
         where: {

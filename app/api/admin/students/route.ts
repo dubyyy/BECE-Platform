@@ -1,8 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getLGAName, getLGACode } from "@/lib/lga-mapping";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import schoolsData from "@/data.json";
+
+type SchoolDataJson = {
+  lgaCode: string;
+  lCode: string;
+  schCode: string;
+  progID: string;
+  schName: string;
+  id: string;
+};
+
+type StudentWithSchool = Prisma.StudentRegistrationGetPayload<{
+  include: { school: { select: { schoolName: true; schoolCode: true; lgaCode: true } } };
+}>;
+
+type PostWithSchool = Prisma.PostRegistrationGetPayload<{
+  include: { school: { select: { schoolName: true; schoolCode: true; lgaCode: true } } };
+}>;
+
+type StudentRow = (StudentWithSchool | PostWithSchool) & {
+  registrationType: "regular" | "late" | "post";
+};
 
 export async function GET(request: NextRequest) {
   // Rate limiting
@@ -23,50 +45,78 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "100"), 1000); // Max 1000 per page
     const skip = (page - 1) * limit;
     
-    // Build where clause for StudentRegistration
-    const studentWhere: any = {};
+    // Build where clauses
+    const studentWhere: Prisma.StudentRegistrationWhereInput = {};
+    const postWhere: Prisma.PostRegistrationWhereInput = {};
     
     // Search by name or student number
     if (search) {
-      studentWhere.OR = [
+      const studentOr: Prisma.StudentRegistrationWhereInput[] = [
         {
           firstname: {
             contains: search,
-            mode: "insensitive",
+            mode: Prisma.QueryMode.insensitive,
           },
         },
         {
           lastname: {
             contains: search,
-            mode: "insensitive",
+            mode: Prisma.QueryMode.insensitive,
           },
         },
         {
           studentNumber: {
             contains: search,
-            mode: "insensitive",
+            mode: Prisma.QueryMode.insensitive,
           },
         },
       ];
+
+      const postOr: Prisma.PostRegistrationWhereInput[] = [
+        {
+          firstname: {
+            contains: search,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+        {
+          lastname: {
+            contains: search,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+        {
+          studentNumber: {
+            contains: search,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+      ];
+
+      studentWhere.OR = studentOr;
+      postWhere.OR = postOr;
     }
-    
+
+    // Filter by School relation
+    let schoolWhere: Prisma.SchoolWhereInput | undefined;
+
     // Filter by LGA
     if (lga && lga !== "all") {
       // Convert LGA name to code (frontend sends names, backend uses codes)
       const lgaCode = getLGACode(lga);
       if (lgaCode) {
-        studentWhere.school = {
-          lgaCode: lgaCode,
-        };
+        schoolWhere = { ...(schoolWhere || {}), lgaCode };
       }
     }
-    
+
     // Filter by school code
     if (schoolCode && schoolCode !== "all") {
-      studentWhere.school = {
-        ...studentWhere.school,
-        schoolCode: schoolCode,
-      };
+      schoolWhere = { ...(schoolWhere || {}), schoolCode };
+    }
+
+    if (schoolWhere) {
+      studentWhere.school = { is: schoolWhere };
+      postWhere.school = { is: schoolWhere };
     }
     
     // Determine which tables/types to query based on registration type filter
@@ -74,7 +124,7 @@ export async function GET(request: NextRequest) {
     const shouldQueryLate = !registrationType || registrationType === "all" || registrationType === "late";
     const shouldQueryPost = !registrationType || registrationType === "all" || registrationType === "post";
     
-    let allStudents: any[] = [];
+    let allStudents: StudentRow[] = [];
     let totalCount = 0;
     
     // Query regular students (not late) if needed
@@ -105,7 +155,7 @@ export async function GET(request: NextRequest) {
         prisma.studentRegistration.count({ where: regularWhere }),
       ]);
       
-      allStudents = allStudents.concat(regularStudents.map(student => ({ ...student, registrationType: "regular" })));
+      allStudents = allStudents.concat(regularStudents.map(student => ({ ...student, registrationType: "regular" } as const)));
       totalCount += regularCount;
     }
     
@@ -137,15 +187,12 @@ export async function GET(request: NextRequest) {
         prisma.studentRegistration.count({ where: lateWhere }),
       ]);
       
-      allStudents = allStudents.concat(lateStudents.map(student => ({ ...student, registrationType: "late" })));
+      allStudents = allStudents.concat(lateStudents.map(student => ({ ...student, registrationType: "late" } as const)));
       totalCount += lateCount;
     }
     
     // Query post students if needed
     if (shouldQueryPost) {
-      // Use the same where clause structure for PostRegistration
-      const postWhere = { ...studentWhere };
-      
       const [postStudents, postCount] = await Promise.all([
         prisma.postRegistration.findMany({
           where: postWhere,
@@ -167,7 +214,7 @@ export async function GET(request: NextRequest) {
         prisma.postRegistration.count({ where: postWhere }),
       ]);
       
-      allStudents = allStudents.concat(postStudents.map(student => ({ ...student, registrationType: "post" })));
+      allStudents = allStudents.concat(postStudents.map(student => ({ ...student, registrationType: "post" } as const)));
       totalCount += postCount;
     }
     
@@ -210,7 +257,7 @@ export async function GET(request: NextRequest) {
 
       if (!resolvedSequentialLgaCode) {
         for (const schCode of schoolCodesToTry) {
-          const fromJson = (schoolsData as any[]).find(
+          const fromJson = (schoolsData as SchoolDataJson[]).find(
             (s) =>
               (s.lCode === schoolLgaCode || s.lgaCode === schoolLgaCode) &&
               s.schCode === schCode

@@ -2,27 +2,32 @@
 
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getCookie } from "@/lib/cookies";
 import Image from "next/image";
 
-const Header = () => {
-  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+type SchoolInfo = {
+  schoolName: string;
+  lgaCode: string;
+  schoolCode: string;
+};
 
-  useEffect(() => {
-    // Check cookies first, then localStorage
-    const cookieInfo = getCookie('schoolInfo');
+const Header = () => {
+  const [schoolInfo] = useState<SchoolInfo | null>(() => {
+    if (typeof window === "undefined") return null;
+
+    const cookieInfo = getCookie("schoolInfo");
     const localInfo = localStorage.getItem("schoolInfo");
     const info = cookieInfo || localInfo;
-    
-    if (info) {
-      try {
-        setSchoolInfo(JSON.parse(info));
-      } catch (e) {
-        console.error('Failed to parse school info:', e);
-      }
+
+    if (!info) return null;
+
+    try {
+      return JSON.parse(info) as SchoolInfo;
+    } catch {
+      return null;
     }
-  }, []);
+  });
 
   return (
     <header className="bg-primary text-primary-foreground sticky top-0 z-50">

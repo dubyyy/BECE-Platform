@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build where clause based on provided parameters
-    const whereClause: any = {};
+    const whereClause: Prisma.ResultWhereInput = {};
     if (examinationNo) {
       whereClause.examinationNo = examinationNo;
     }

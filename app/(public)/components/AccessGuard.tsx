@@ -1,38 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCookie } from "@/lib/cookies";
 
 export default function AccessGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const isChecking = typeof window === "undefined";
+  const cookieToken = !isChecking ? getCookie("accessToken") : null;
+  const localToken = !isChecking ? localStorage.getItem("accessToken") : null;
+  const accessToken = cookieToken || localToken;
+  const isAuthenticated = Boolean(accessToken);
 
   useEffect(() => {
-    // Check if user has access token in cookies or localStorage
-    const cookieToken = getCookie('accessToken');
-    const localToken = localStorage.getItem("accessToken");
-    const accessToken = cookieToken || localToken;
-    
     if (!accessToken) {
       // Redirect to access page if no token
       router.push("/access");
     } else {
-      setIsAuthenticated(true);
-      
       // Sync: if we have cookie but not localStorage, update localStorage
       if (cookieToken && !localToken) {
         localStorage.setItem("accessToken", cookieToken);
-        const schoolInfo = getCookie('schoolInfo');
+        const schoolInfo = getCookie("schoolInfo");
         if (schoolInfo) {
           localStorage.setItem("schoolInfo", schoolInfo);
         }
       }
     }
-    
-    setIsChecking(false);
-  }, [router]);
+  }, [router, accessToken, cookieToken, localToken]);
 
   // Show loading state while checking authentication
   if (isChecking) {

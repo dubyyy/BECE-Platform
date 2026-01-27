@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,7 +164,6 @@ export default function AccessPinsPage() {
   };
 
   const activePins = pins.filter(p => p.isActive);
-  const inactivePins = pins.filter(p => !p.isActive);
   const claimedPins = pins.filter(p => p.ownerSchoolCode);
   const unclaimedPins = pins.filter(p => !p.ownerSchoolCode && p.isActive);
 

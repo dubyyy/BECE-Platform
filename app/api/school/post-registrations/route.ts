@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { generateBatchAccCodes } from '@/lib/generate-acccode';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -52,7 +53,7 @@ export async function PATCH(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -77,7 +78,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Map nested client fields to flat DB columns if provided
-    const data: any = {};
+    const data: Prisma.PostRegistrationUpdateManyMutationInput = {};
     if (typeof update.firstname === 'string') data.firstname = update.firstname;
     if (typeof update.othername === 'string') data.othername = update.othername;
     if (typeof update.lastname === 'string') data.lastname = update.lastname;
@@ -181,7 +182,7 @@ export async function DELETE(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -259,7 +260,7 @@ export async function GET(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -354,7 +355,7 @@ export async function POST(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -400,33 +401,33 @@ export async function POST(req: NextRequest) {
     // Handle both new dynamic caScores format and legacy fixed subject format
     const studentData = registrations.map((reg: RegistrationData, index: number) => {
       // Extract CA scores - prioritize new caScores format, fall back to legacy fields
-      const caScores = (reg as any).caScores || {};
-      const studentSubjects = (reg as any).studentSubjects || [];
+      const caScores = reg.caScores || {};
+      const studentSubjects = reg.studentSubjects || [];
       
       // Get English scores (from caScores.ENG or legacy english field)
       const engScores = caScores['ENG'] || reg.english || {};
-      const englishTerm1 = engScores.term1 || engScores.year1 || '-';
-      const englishTerm2 = engScores.term2 || engScores.year2 || '-';
-      const englishTerm3 = engScores.term3 || engScores.year3 || '-';
+      const englishTerm1 = engScores.year1 || '-';
+      const englishTerm2 = engScores.year2 || '-';
+      const englishTerm3 = engScores.year3 || '-';
       
       // Get Math/Arithmetic scores (from caScores.MTH or legacy arithmetic field)
       const mathScores = caScores['MTH'] || reg.arithmetic || {};
-      const arithmeticTerm1 = mathScores.term1 || mathScores.year1 || '-';
-      const arithmeticTerm2 = mathScores.term2 || mathScores.year2 || '-';
-      const arithmeticTerm3 = mathScores.term3 || mathScores.year3 || '-';
+      const arithmeticTerm1 = mathScores.year1 || '-';
+      const arithmeticTerm2 = mathScores.year2 || '-';
+      const arithmeticTerm3 = mathScores.year3 || '-';
       
       // Get General/Basic Science scores (from caScores.BST or legacy general field)
       const generalScores = caScores['BST'] || reg.general || {};
-      const generalTerm1 = generalScores.term1 || generalScores.year1 || '-';
-      const generalTerm2 = generalScores.term2 || generalScores.year2 || '-';
-      const generalTerm3 = generalScores.term3 || generalScores.year3 || '-';
+      const generalTerm1 = generalScores.year1 || '-';
+      const generalTerm2 = generalScores.year2 || '-';
+      const generalTerm3 = generalScores.year3 || '-';
       
       // Get Religious Studies scores (from caScores.RGS or legacy religious field)
       const religiousScores = caScores['RGS'] || reg.religious || {};
       const religiousType = reg.religious?.type || '';
-      const religiousTerm1 = religiousScores.term1 || religiousScores.year1 || '-';
-      const religiousTerm2 = religiousScores.term2 || religiousScores.year2 || '-';
-      const religiousTerm3 = religiousScores.term3 || religiousScores.year3 || '-';
+      const religiousTerm1 = religiousScores.year1 || '-';
+      const religiousTerm2 = religiousScores.year2 || '-';
+      const religiousTerm3 = religiousScores.year3 || '-';
       
       return {
         accCode: accCodes[index],

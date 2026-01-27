@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     });
     
     // Group by LGA
-    const lgaStats = schools.reduce((acc: any, school) => {
+    const lgaStats = schools.reduce<Record<string, { lga: string; students: number; schools: number }>>((acc, school) => {
       const lgaCode = school.lgaCode;
       const lgaName = getLGAName(lgaCode);
       
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     }, {});
     
     // Convert to array and sort by student count
-    const lgaArray = Object.values(lgaStats).sort((a: any, b: any) => 
+    const lgaArray = Object.values(lgaStats).sort((a, b) => 
       b.students - a.students
     );
 

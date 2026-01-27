@@ -24,18 +24,18 @@ export default function AccessPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
   const [showPin, setShowPin] = useState(false);
+
+  const isChecking = typeof window === "undefined";
+  const accessToken = !isChecking ? getCookie("accessToken") : null;
+  const isRedirecting = Boolean(accessToken);
 
   // Check if user is already authenticated
   useEffect(() => {
-    const accessToken = getCookie('accessToken');
     if (accessToken) {
       router.push("/portal");
-    } else {
-      setIsChecking(false);
     }
-  }, [router]);
+  }, [router, accessToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,14 +65,14 @@ export default function AccessPage() {
       localStorage.setItem("schoolInfo", JSON.stringify(data.school));
 
       router.push("/portal");
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
       setIsLoading(false);
     }
   };
 
   // Show loading while checking authentication
-  if (isChecking) {
+  if (isChecking || isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

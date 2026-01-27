@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const accessPin = searchParams.get('accessPin') ?? searchParams.get('pinCode');
-    const serialNumber = searchParams.get('serial');
     const examinationNumber = searchParams.get('examNumber');
 
     // Validate required fields

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 interface JwtPayload {
@@ -31,7 +32,7 @@ export async function PATCH(
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -65,7 +66,7 @@ export async function PATCH(
     console.log('Updating student ID:', studentId);
     console.log('Update data received:', updateData);
 
-    const data: any = {};
+    const data: Prisma.StudentRegistrationUpdateInput = {};
 
     if (typeof updateData.firstname === 'string') data.firstname = updateData.firstname;
     if (typeof updateData.othername === 'string' || updateData.othername === null) data.othername = updateData.othername;

@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Map nested client fields to flat DB columns if provided
-    const data: any = {};
+    const data: Prisma.StudentRegistrationUpdateManyMutationInput = {};
     if (typeof update.firstname === 'string') data.firstname = update.firstname;
     if (typeof update.othername === 'string') data.othername = update.othername;
     if (typeof update.lastname === 'string') data.lastname = update.lastname;
@@ -182,7 +182,7 @@ export async function DELETE(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -271,7 +271,7 @@ export async function GET(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -289,7 +289,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Map database fields to frontend fields
-    const mappedRegistrations = registrations.map((r: any) => ({
+    const mappedRegistrations = registrations.map((r) => ({
       ...r,
       // Include dynamic CA scores and selected subjects
       caScores: r.caScores,
@@ -356,7 +356,7 @@ export async function POST(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }

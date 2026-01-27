@@ -98,11 +98,11 @@ function parseCSV(csvText: string): CSVRow[] {
       continue; // Skip malformed rows
     }
 
-    const row: any = {};
+    const row: Record<string, string> = {};
     headers.forEach((header, index) => {
       row[header] = values[index];
     });
-    rows.push(row as CSVRow);
+    rows.push(row as unknown as CSVRow);
   }
 
   return rows;

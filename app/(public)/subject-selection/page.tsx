@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,23 +26,20 @@ const SUBJECTS = [
 
 export default function SubjectSelectionPage() {
   const router = useRouter();
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
 
-  // Load any previously selected subjects from sessionStorage
-  useEffect(() => {
     const stored = sessionStorage.getItem("selectedSubjects");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setSelectedSubjects(parsed);
-        }
-      } catch (e) {
-        console.error("Error parsing stored subjects:", e);
-      }
+    if (!stored) return [];
+
+    try {
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
-  }, []);
+  });
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const handleSubjectToggle = (code: string) => {
     setSelectedSubjects((prev) => {

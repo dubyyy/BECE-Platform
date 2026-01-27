@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,7 +19,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const accessPin = searchParams.get('accessPin') ?? searchParams.get('pinCode');
-    const serialNumber = searchParams.get('serial');
     const examinationNumber = searchParams.get('examNumber');
 
     // Validate required fields
@@ -49,14 +49,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Query database - Type assertion due to Prisma client being out of sync with schema
-    const result: any = await prisma.result.findFirst({
-      where: {
-        ...(isMasterPin ? {} : { accessPin }),
-        examinationNo: examinationNumber,
-        ...(isMasterPin ? {} : { blocked: false }),
-      } as any,
-    });
+    // Query database - keep a narrow, explicit shape to avoid `any`
+    const where: Prisma.ResultWhereInput = {
+      ...(isMasterPin ? {} : { accessPin }),
+      examinationNo: examinationNumber,
+      ...(isMasterPin ? {} : { blocked: false }),
+    };
+
+    const result = (await prisma.result.findFirst({ where })) as unknown as {
+      examinationNo: string;
+      sessionYr: string | null;
+      fName: string | null;
+      mName: string | null;
+      lName: string | null;
+      sexCd: string | null;
+      dateOfBirth: Date | string | null;
+      schoolName: string | null;
+      lgaCd: string | null;
+      engGrd: string | null;
+      aritGrd: string | null;
+      gpGrd: string | null;
+      rgsGrd: string | null;
+      rgstype: string | null;
+      remark: string | null;
+    } | null;
 
     if (!result) {
       const blockedResult = await prisma.result.findFirst({
@@ -64,8 +80,8 @@ export async function GET(request: NextRequest) {
           ...(isMasterPin ? {} : { accessPin }),
           examinationNo: examinationNumber,
           blocked: true,
-        } as any,
-        select: { id: true } as any,
+        },
+        select: { id: true },
       });
 
       if (blockedResult && !isMasterPin) {

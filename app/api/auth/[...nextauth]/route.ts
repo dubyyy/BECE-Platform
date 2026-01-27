@@ -15,7 +15,7 @@ const handler = NextAuth({
     signIn: '/auth/signin',
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       // Add error logging for debugging
       console.log("Sign in attempt:", { user: user.email, provider: account?.provider });
       return true;

@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
     }
 
     const generatedPins = [];
-    const failedCount = 0;
 
     // Generate the requested number of PINs
     for (let i = 0; i < count; i++) {
@@ -32,9 +31,9 @@ export async function POST(req: NextRequest) {
           
           generatedPins.push(createdPin);
           pinCreated = true;
-        } catch (error: any) {
+        } catch (error: unknown) {
           // If duplicate, try again with a new PIN
-          if (error.code === 'P2002') {
+          if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
             attempts++;
           } else {
             throw error;

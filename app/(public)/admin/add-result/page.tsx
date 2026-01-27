@@ -11,6 +11,18 @@ interface UploadProgress {
   message: string;
 }
 
+interface UploadErrorDetail {
+  row: number;
+  error: string;
+}
+
+interface UploadCompleteData {
+  phase: 'complete';
+  message: string;
+  totalProcessed?: number;
+  errors?: UploadErrorDetail[];
+}
+
 const ResultFormContent = () => {
   const { addToast } = useToast();
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -113,7 +125,7 @@ const ResultFormContent = () => {
         throw new Error('Stream not available');
       }
 
-      let finalData: any = null;
+      let finalData: UploadCompleteData | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -125,18 +137,19 @@ const ResultFormContent = () => {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.slice(6));
+              const data = JSON.parse(line.slice(6)) as unknown;
+              const typed = data as Partial<UploadProgress> & Partial<UploadCompleteData>;
               
               setUploadProgress({
-                progress: data.progress || 0,
-                phase: data.phase || '',
-                message: data.message || '',
+                progress: typed.progress || 0,
+                phase: typed.phase || '',
+                message: typed.message || '',
               });
 
-              if (data.phase === 'complete') {
-                finalData = data;
+              if (typed.phase === 'complete' && typeof typed.message === 'string') {
+                finalData = typed as UploadCompleteData;
               }
-            } catch (parseError) {
+            } catch {
               // Ignore parse errors for incomplete chunks
             }
           }
@@ -154,7 +167,7 @@ const ResultFormContent = () => {
 
         // Show errors if any
         if (finalData.errors && finalData.errors.length > 0) {
-          const errorDetails = finalData.errors.slice(0, 5).map((err: any) => 
+          const errorDetails = finalData.errors.slice(0, 5).map((err) => 
             `Row ${err.row}: ${err.error}`
           ).join('\n');
           

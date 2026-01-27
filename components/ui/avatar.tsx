@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
+import type { ImageProps } from "next/image"
 import { cn } from "@/lib/utils"
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -24,14 +26,19 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
 )
 Avatar.displayName = "Avatar"
 
-interface AvatarImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+type AvatarImageProps = Omit<
+  ImageProps,
+  "src" | "alt" | "fill" | "width" | "height" | "sizes" | "className" | "onError" | "onLoadingComplete"
+> & {
   src?: string;
   alt?: string;
   className?: string;
-}
+  sizes?: string;
+  unoptimized?: boolean;
+};
 
 const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
-  ({ className, src, alt, ...props }, ref) => {
+  ({ className, src, alt, sizes = "40px", unoptimized = true, ...props }, _ref) => {
     const [imageLoaded, setImageLoaded] = React.useState(false);
     const [hasError, setHasError] = React.useState(false);
 
@@ -40,17 +47,19 @@ const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
     }
 
     return (
-      <img
-        ref={ref}
+      <Image
         src={src}
-        alt={alt}
+        alt={alt ?? ""}
+        fill
+        sizes={sizes}
+        unoptimized={unoptimized}
         className={cn(
           "aspect-square h-full w-full",
           imageLoaded ? "opacity-100" : "opacity-0",
           className
         )}
-        onLoad={() => setImageLoaded(true)}
         onError={() => setHasError(true)}
+        onLoadingComplete={() => setImageLoaded(true)}
         {...props}
       />
     );
