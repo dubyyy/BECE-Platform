@@ -107,8 +107,11 @@ export function AppSidebar() {
             variant="ghost"
             className="w-full justify-start gap-3"
             onClick={() => {
-              // Handle logout
-              window.location.href = "/auth/signin";
+              fetch("/api/admin/logout", { method: "POST" })
+                .catch(() => {})
+                .finally(() => {
+                  window.location.href = "/admin";
+                });
             }}
           >
             <LogOut className="h-4 w-4" />

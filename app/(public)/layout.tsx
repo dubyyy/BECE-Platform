@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Source_Sans_3, Roboto_Mono } from "next/font/google";
 import "@/app/globals.css";
-import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { Toaster } from "sonner";
 

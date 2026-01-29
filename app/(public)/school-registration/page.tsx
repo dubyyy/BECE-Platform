@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Upload, Edit2, X, Trash2, CheckCircle2, AlertCircle, Printer, Save, AlertTriangle, Check } from "lucide-react";
 import {
@@ -17,9 +16,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import schoolsData from '@/data.json';
+import Image from "next/image";
 
 interface SchoolData {
   lgaCode: string;
@@ -120,7 +119,6 @@ const SUBJECTS = [
 ];
 
 const SchoolRegistration = () => {
-  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   // Per-student subject selection (for current student being registered)
   const [studentSubjects, setStudentSubjects] = useState<string[]>([]);
@@ -137,8 +135,6 @@ const SchoolRegistration = () => {
   // Dynamic CA scores state - keyed by subject code
   const [caScores, setCaScores] = useState<CAScores>({});
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [editingId, setEditingId] = useState<string | number | null>(null);
-  const [editData, setEditData] = useState<Registration | null>(null);
   const [loginError, setLoginError] = useState<string>("");
   const [authenticatedSchool, setAuthenticatedSchool] = useState<string>("");
   const [studentCounter, setStudentCounter] = useState<number>(1);
@@ -1314,10 +1310,12 @@ const SchoolRegistration = () => {
                     </div>
                     {selectedImage && (
                       <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
-                        <img
+                        <Image
                           src={selectedImage}
                           alt="Preview"
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          unoptimized
                         />
                       </div>
                     )}
@@ -1617,11 +1615,15 @@ const SchoolRegistration = () => {
                           <TableRow key={reg.id}>
                             <TableCell>
                               {reg.passport ? (
-                                <img
-                                  src={reg.passport}
-                                  alt="Student"
-                                  className="w-12 h-12 rounded-full object-cover"
-                                />
+                                <div className="relative w-12 h-12 rounded-full overflow-hidden">
+                                  <Image
+                                    src={reg.passport}
+                                    alt="Student"
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                  />
+                                </div>
                               ) : (
                                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xs">
                                   No Photo
@@ -1866,10 +1868,12 @@ const SchoolRegistration = () => {
                 <div className="flex items-center gap-4">
                   {editModalImage && (
                     <div className="relative w-20 h-20 border rounded-lg overflow-hidden">
-                      <img
+                      <Image
                         src={editModalImage}
                         alt="Current passport"
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        unoptimized
                       />
                     </div>
                   )}

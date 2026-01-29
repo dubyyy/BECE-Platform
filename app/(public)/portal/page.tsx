@@ -6,9 +6,7 @@ import Header from "../components/Header";
 import {
   ClipboardList,
   School,
-  FileText,
   AlertCircle,
-  UserPlus,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 

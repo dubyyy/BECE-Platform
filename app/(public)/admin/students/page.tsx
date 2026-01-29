@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, Download, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { LGA_MAPPING, getLGACode } from "@/lib/lga-mapping";
+import { LGA_MAPPING } from "@/lib/lga-mapping";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
@@ -77,11 +77,7 @@ export default function Students() {
   // All LGAs in Delta State from the mapping
   const allLGAs = Object.values(LGA_MAPPING).sort();
 
-  useEffect(() => {
-    fetchStudents();
-  }, [searchTerm, selectedLGA, schoolCodeInput, registrationType]);
-
-  async function fetchStudents() {
+  const fetchStudents = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
@@ -118,7 +114,11 @@ export default function Students() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [searchTerm, selectedLGA, schoolCodeInput, registrationType]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   function exportAsCSV() {
     if (safeStudents.length === 0) {

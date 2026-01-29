@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2, FileText, Ban, CheckCircle2, School, MapPin, Filter, Church, Globe, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
+
+interface AdminResultsResponse {
+  filters?: {
+    lgaCodes?: string[];
+  };
+  results?: Array<{
+    institutionCd?: string | null;
+  }>;
+  pagination?: {
+    totalCount: number;
+  };
+}
+
+type ResultClassificationPayload =
+  | { rgstype: string; examinationNo: string }
+  | { rgstype: string; institutionCd: string; lgaCd?: string }
+  | { rgstype: string; lgaCd: string };
 
 export default function ManagePage() {
   // Count and filter states
@@ -68,27 +85,18 @@ export default function ManagePage() {
   // Global release states
   const [globalReleaseLoading, setGlobalReleaseLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCounts();
-    fetchFilterOptions();
-  }, []);
-
-  useEffect(() => {
-    fetchCounts();
-  }, [selectedLga, selectedSchool]);
-
-  const fetchFilterOptions = async () => {
+  const fetchFilterOptions = useCallback(async () => {
     try {
       const resultsRes = await fetch("/api/admin/results?limit=1");
       if (resultsRes.ok) {
-        const data = await resultsRes.json();
+        const data: AdminResultsResponse = await resultsRes.json();
         if (data.filters) {
           setLgaCodes(data.filters.lgaCodes || []);
           
           const uniqueSchools = await fetch("/api/admin/results?limit=10000&page=1");
           if (uniqueSchools.ok) {
-            const schoolsData = await uniqueSchools.json();
-            const codes = [...new Set(schoolsData.results.map((r: any) => r.institutionCd))].filter(Boolean);
+            const schoolsData: AdminResultsResponse = await uniqueSchools.json();
+            const codes = [...new Set((schoolsData.results || []).map((r) => r.institutionCd))].filter(Boolean);
             setSchoolCodes(codes as string[]);
           }
         }
@@ -96,9 +104,9 @@ export default function ManagePage() {
     } catch (error) {
       console.error("Error fetching filter options:", error);
     }
-  };
+  }, []);
 
-  const fetchCounts = async () => {
+  const fetchCounts = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ limit: "1" });
@@ -111,8 +119,8 @@ export default function ManagePage() {
 
       const resultsRes = await fetch(`/api/admin/results?${params.toString()}`);
       if (resultsRes.ok) {
-        const data = await resultsRes.json();
-        setResultsCount(data.pagination.totalCount);
+        const data: AdminResultsResponse = await resultsRes.json();
+        setResultsCount(data.pagination?.totalCount ?? 0);
       }
     } catch (error) {
       console.error("Error fetching counts:", error);
@@ -120,7 +128,16 @@ export default function ManagePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedLga, selectedSchool]);
+
+  useEffect(() => {
+    fetchCounts();
+    fetchFilterOptions();
+  }, [fetchCounts, fetchFilterOptions]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [selectedLga, selectedSchool, fetchCounts]);
 
   const handleDeleteResult = async () => {
     if (!deleteResultExam) {
@@ -342,17 +359,20 @@ export default function ManagePage() {
 
     setResultClassificationLoading(true);
     try {
-      const payload: any = { rgstype };
+      let payload: ResultClassificationPayload;
       
       if (resultClassificationType === "exam") {
-        payload.examinationNo = resultClassificationExam;
+        payload = { rgstype, examinationNo: resultClassificationExam };
       } else if (resultClassificationType === "school") {
-        payload.institutionCd = resultClassificationSchool;
-        if (resultClassificationLga !== "all") {
-          payload.lgaCd = resultClassificationLga;
-        }
+        payload = {
+          rgstype,
+          institutionCd: resultClassificationSchool,
+          ...(resultClassificationLga !== "all" ? { lgaCd: resultClassificationLga } : {}),
+        };
       } else if (resultClassificationType === "lga") {
-        payload.lgaCd = resultClassificationLga;
+        payload = { rgstype, lgaCd: resultClassificationLga };
+      } else {
+        payload = { rgstype, lgaCd: resultClassificationLga };
       }
 
       const res = await fetch("/api/admin/result-classification", {

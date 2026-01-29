@@ -29,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Edit, Trash2, LockKeyhole, Key, Copy, Ban, Church } from "lucide-react";
+import { Plus, Trash2, LockKeyhole, Key, Copy, Ban, Church } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -279,7 +279,7 @@ export default function Schools() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Generate PINs for All Schools</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will generate access PINs for all schools that don't have one yet. 
+                  This will generate access PINs for all schools that do not have one yet. 
                   Schools that already have PINs will not be affected.
                 </AlertDialogDescription>
               </AlertDialogHeader>

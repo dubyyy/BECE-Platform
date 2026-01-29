@@ -38,7 +38,7 @@ type AvatarImageProps = Omit<
 };
 
 const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
-  ({ className, src, alt, sizes = "40px", unoptimized = true, ...props }, _ref) => {
+  ({ className, src, alt, sizes = "40px", unoptimized = true, ...props }) => {
     const [imageLoaded, setImageLoaded] = React.useState(false);
     const [hasError, setHasError] = React.useState(false);
 

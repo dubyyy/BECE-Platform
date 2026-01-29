@@ -45,6 +45,8 @@ interface SchoolData {
   id: string;
 }
 
+type CsvRow = Record<string, string>;
+
 export default function DataJsonManager() {
   const [schools, setSchools] = useState<SchoolData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function DataJsonManager() {
   });
   const [addMode, setAddMode] = useState<"manual" | "csv">("manual");
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [parsedCsvData, setParsedCsvData] = useState<any[]>([]);
+  const [parsedCsvData, setParsedCsvData] = useState<CsvRow[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   // Debounce search query
@@ -110,16 +112,16 @@ export default function DataJsonManager() {
     fetchSchools();
   }, [fetchSchools]);
 
-  const parseCSV = (text: string): any[] => {
+  const parseCSV = (text: string): CsvRow[] => {
     const lines = text.split("\n").filter(line => line.trim());
     if (lines.length < 2) return [];
 
     const headers = lines[0].split(",").map(h => h.trim());
-    const data: any[] = [];
+    const data: CsvRow[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map(v => v.trim());
-      const row: any = {};
+      const row: CsvRow = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || "";
       });
@@ -412,6 +414,11 @@ export default function DataJsonManager() {
                   <p className="text-sm text-muted-foreground">
                     CSV should have headers: lgaCode, lCode, schCode, progID, schName
                   </p>
+                  {csvFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected file: {csvFile.name}
+                    </p>
+                  )}
                 </div>
 
                 {parsedCsvData.length > 0 && (

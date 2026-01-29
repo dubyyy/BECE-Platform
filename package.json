@@ -11,7 +11,6 @@
     "sync-db": "tsx scripts/sync-database-with-json.ts"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.11.1",
     "@prisma/client": "^6.19.0",
     "@prisma/extension-accelerate": "^2.0.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -32,7 +31,6 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.553.0",
     "next": "^15.5.9",
-    "next-auth": "^4.24.13",
     "pdf-lib": "^1.17.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",

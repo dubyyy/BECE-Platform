@@ -6,6 +6,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Printer, Download } from "lucide-react";
 import Link from 'next/link';
 import { useState } from "react";
+import Image from "next/image";
+
+interface ResultData {
+  accessPin?: string;
+  examinationNo: string;
+  sessionYr?: string;
+  fName?: string;
+  mName?: string;
+  lName?: string;
+  sexCd?: string;
+  dateOfBirth?: string;
+  schoolName?: string;
+  institutionCd?: string;
+  lgaCd?: string;
+  passport?: string;
+  remark?: string;
+  rgstype?: string;
+  engGrd?: string;
+  mthGrd?: string;
+  aritGrd?: string;
+  bstGrd?: string;
+  gpGrd?: string;
+  rgsGrd?: string;
+  hstGrd?: string;
+  arbGrd?: string;
+  ccaGrd?: string;
+  freGrd?: string;
+  nvsGrd?: string;
+  llgGrd?: string;
+  pvsGrd?: string;
+  busGrd?: string;
+}
 
 const PrimaryResult = () => {
   const [formData, setFormData] = useState({
@@ -14,7 +46,7 @@ const PrimaryResult = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resultData, setResultData] = useState<any>(null);
+  const [resultData, setResultData] = useState<ResultData | null>(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -342,11 +374,15 @@ const PrimaryResult = () => {
                 {/* Passport Photo */}
                 {resultData.passport && (
                   <div className="flex justify-center">
-                    <img 
-                      src={resultData.passport} 
-                      alt="Candidate Photograph" 
-                      className="w-28 h-36 object-cover border border-border"
-                    />
+                    <div className="relative w-28 h-36 border border-border">
+                      <Image
+                        src={resultData.passport}
+                        alt="Candidate Photograph"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
                   </div>
                 )}
 
