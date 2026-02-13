@@ -160,21 +160,133 @@ export default function Students() {
     fetchStudents();
   }, [fetchStudents]);
 
-  function exportAsCSV() {
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState("");
+
+  async function exportAsCSV() {
+    if (exporting) return;
+    setExporting(true);
+    setExportProgress("Starting export...");
+
     try {
-      toast.info("Preparing export — download will start shortly...", { duration: 3000 });
+      const baseParams = new URLSearchParams();
+      if (searchTerm) baseParams.append("search", searchTerm);
+      if (selectedLGA && selectedLGA !== "all") baseParams.append("lga", selectedLGA);
+      if (schoolCodeInput) baseParams.append("schoolCode", schoolCodeInput);
+      if (registrationType && registrationType !== "all") baseParams.append("registrationType", registrationType);
 
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("search", searchTerm);
-      if (selectedLGA && selectedLGA !== "all") params.append("lga", selectedLGA);
-      if (schoolCodeInput) params.append("schoolCode", schoolCodeInput);
-      if (registrationType && registrationType !== "all") params.append("registrationType", registrationType);
+      // Step 1: Get counts for each table
+      const countParams = new URLSearchParams(baseParams);
+      countParams.append("countOnly", "true");
+      const countRes = await fetch(`/api/admin/students/export-chunk?${countParams.toString()}`);
+      if (!countRes.ok) throw new Error("Failed to get record counts");
+      const countData = await countRes.json();
+      const { totalCount, tables } = countData as {
+        totalCount: number;
+        tables: { table: string; count: number }[];
+      };
 
-      // Open the streaming CSV endpoint — browser downloads the file directly
-      window.open(`/api/admin/students/export?${params.toString()}`, "_blank");
+      if (totalCount === 0) {
+        toast.info("No records to export");
+        setExporting(false);
+        setExportProgress("");
+        return;
+      }
+
+      toast.info(`Exporting ${totalCount.toLocaleString()} records...`, { duration: 5000 });
+
+      // CSV header
+      const CSV_HEADERS = [
+        "S/N","school_session","progID","Reg. No","ACCESSCODE",
+        "Surename","Other Name(s)","First Name","Gender",
+        "ARBY1","ARBY2","ARBY3","BSTY1","BSTY2","BSTY3",
+        "BUSY1","BUSY2","BUSY3","CCAY1","CCAY2","CCAY3",
+        "ENGY1","ENGY2","ENGY3","FREY1","FREY2","FREY3",
+        "HSTY1","HSTY2","HSTY3","LLGY1","LLGY2","LLGY3",
+        "MTHY1","MTHY2","MTHY3","NVSY1","NVSY2","NVSY3",
+        "PVSY1","PVSY2","PVSY3","RGSY1","RGSY2","RGSY3",
+        "rgsType","schType","schcode","lgacode","DATE OF BIRTH",
+      ];
+
+      function escapeCsvField(val: string): string {
+        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      }
+
+      const csvParts: string[] = [CSV_HEADERS.map(escapeCsvField).join(",") + "\n"];
+      let totalExported = 0;
+
+      // Step 2: For each table, fetch all chunks with retry
+      for (const { table, count: tableCount } of tables) {
+        if (tableCount === 0) continue;
+
+        let cursor: string | null = null;
+        let hasMore = true;
+
+        while (hasMore) {
+          const chunkParams = new URLSearchParams(baseParams);
+          chunkParams.append("table", table);
+          if (cursor) chunkParams.append("cursor", cursor);
+
+          let chunkData: { rows: string[][]; nextCursor: string | null; chunkSize: number; hasMore: boolean } | null = null;
+          let retries = 0;
+          const maxRetries = 5;
+
+          while (retries < maxRetries && !chunkData) {
+            try {
+              const res = await fetch(`/api/admin/students/export-chunk?${chunkParams.toString()}`);
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              chunkData = await res.json();
+            } catch (err) {
+              retries++;
+              console.warn(`Chunk fetch failed (attempt ${retries}/${maxRetries}):`, err);
+              if (retries < maxRetries) {
+                // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+                const delay = Math.min(2000 * Math.pow(2, retries - 1), 32000);
+                setExportProgress(`Retrying... (attempt ${retries + 1}/${maxRetries})`);
+                await new Promise(r => setTimeout(r, delay));
+              } else {
+                throw new Error(`Failed to fetch chunk after ${maxRetries} retries. Exported ${totalExported}/${totalCount} so far.`);
+              }
+            }
+          }
+
+          if (!chunkData || !chunkData.rows) break;
+
+          // Convert rows to CSV text
+          let chunkCsv = "";
+          for (const row of chunkData.rows) {
+            totalExported++;
+            chunkCsv += [String(totalExported), ...row].map(f => escapeCsvField(f ?? "")).join(",") + "\n";
+          }
+          csvParts.push(chunkCsv);
+
+          const pct = Math.round((totalExported / totalCount) * 100);
+          setExportProgress(`Exported ${totalExported.toLocaleString()} / ${totalCount.toLocaleString()} (${pct}%)`);
+
+          cursor = chunkData.nextCursor;
+          hasMore = chunkData.hasMore;
+        }
+      }
+
+      // Step 3: Assemble and download
+      setExportProgress("Preparing download...");
+      const blob = new Blob(csvParts, { type: "text/csv;charset=utf-8;" });
+      saveAs(blob, `students_export_${new Date().toISOString().split("T")[0]}.csv`);
+
+      toast.success(`Successfully exported ${totalExported.toLocaleString()} records`);
+
+      if (totalExported !== totalCount) {
+        toast.warning(`Expected ${totalCount.toLocaleString()} but exported ${totalExported.toLocaleString()}. Some records may be missing.`);
+      }
     } catch (error) {
       console.error("Export failed:", error);
-      toast.error("Failed to export data");
+      toast.error(error instanceof Error ? error.message : "Failed to export data");
+    } finally {
+      setExporting(false);
+      setExportProgress("");
     }
   }
 
@@ -345,25 +457,35 @@ export default function Students() {
             </div>
           )}
 
-          <div className="flex gap-2 sm:gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs sm:text-sm"
-              onClick={exportAsCSV}
-            >
-              <Download className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-              Export Data
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs sm:text-sm"
-              onClick={downloadAllImages}
-            >
-              <Download className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-              Download Images
-            </Button>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 sm:gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs sm:text-sm"
+                onClick={exportAsCSV}
+                disabled={exporting}
+              >
+                <Download className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                {exporting ? "Exporting..." : "Export Data"}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs sm:text-sm"
+                onClick={downloadAllImages}
+                disabled={exporting}
+              >
+                <Download className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                Download Images
+              </Button>
+            </div>
+            {exportProgress && (
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                <span>{exportProgress}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
