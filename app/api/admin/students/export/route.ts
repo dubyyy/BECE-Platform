@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getLGAName, getLGACode } from '@/lib/lga-mapping';
+import { getLGACode } from '@/lib/lga-mapping';
 import schoolsData from '@/data.json';
 
 const BATCH_SIZE = 5000;
@@ -34,7 +34,9 @@ export async function GET(request: NextRequest) {
     const registrationType = searchParams.get("registrationType");
 
     // Build where clauses
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const studentWhere: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const postWhere: any = {};
 
     if (search) {
@@ -47,6 +49,7 @@ export async function GET(request: NextRequest) {
       postWhere.OR = orClause;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let schoolWhere: any = undefined;
     if (lga && lga !== "all") {
       const lgaCode = getLGACode(lga);
@@ -122,6 +125,7 @@ export async function GET(request: NextRequest) {
 
     let rowCounter = 0;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function studentToCsvRow(student: any): string {
       rowCounter++;
       const ca = student.caScores as Record<string, { term1?: string; term2?: string; term3?: string }> | null;
@@ -171,12 +175,14 @@ export async function GET(request: NextRequest) {
           // Helper: fetch and stream one table in batches
           async function streamTable(
             model: 'studentRegistration' | 'postRegistration',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             where: any,
           ) {
             let cursor: string | undefined = undefined;
             let hasMore = true;
 
             while (hasMore) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const queryArgs: any = {
                 where,
                 include: {
@@ -193,6 +199,7 @@ export async function GET(request: NextRequest) {
                 queryArgs.skip = 1;
               }
 
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const batch: any[] = await (prisma[model] as any).findMany(queryArgs);
 
               if (batch.length === 0) {

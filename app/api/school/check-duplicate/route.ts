@@ -59,8 +59,6 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (const student of students as StudentToCheck[]) {
-      const normalizeStr = (s: string) => s.trim().toLowerCase();
-
       // Check in StudentRegistration for EXACT duplicates only (same firstname, lastname, AND othername)
       const existingStudent = await prisma.studentRegistration.findFirst({
         where: {

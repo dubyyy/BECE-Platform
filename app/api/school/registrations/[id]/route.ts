@@ -174,7 +174,7 @@ export async function DELETE(
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch (_error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }

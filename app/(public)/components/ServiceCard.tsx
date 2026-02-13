@@ -14,7 +14,6 @@ const ServiceCard = ({
   description,
   icon: Icon,
   href,
-  variant: _variant = "primary",
 }: ServiceCardProps) => {
   return (
     <Link href={href} className="block">
