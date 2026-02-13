@@ -143,6 +143,33 @@ model StudentRegistration {
   religiousTerm1   String?
   religiousTerm2   String?
   religiousTerm3   String?
+  arabicTerm1      String?
+  arabicTerm2      String?
+  arabicTerm3      String?
+  businessTerm1    String?
+  businessTerm2    String?
+  businessTerm3    String?
+  ccaTerm1         String?
+  ccaTerm2         String?
+  ccaTerm3         String?
+  frenchTerm1      String?
+  frenchTerm2      String?
+  frenchTerm3      String?
+  historyTerm1     String?
+  historyTerm2     String?
+  historyTerm3     String?
+  localLangTerm1   String?
+  localLangTerm2   String?
+  localLangTerm3   String?
+  nvsTerm1         String?
+  nvsTerm2         String?
+  nvsTerm3         String?
+  pvsTerm1         String?
+  pvsTerm2         String?
+  pvsTerm3         String?
+  technologyTerm1  String?
+  technologyTerm2  String?
+  technologyTerm3  String?
   schoolId         String
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -198,6 +225,33 @@ model PostRegistration {
   religiousTerm1   String?
   religiousTerm2   String?
   religiousTerm3   String?
+  arabicTerm1      String?
+  arabicTerm2      String?
+  arabicTerm3      String?
+  businessTerm1    String?
+  businessTerm2    String?
+  businessTerm3    String?
+  ccaTerm1         String?
+  ccaTerm2         String?
+  ccaTerm3         String?
+  frenchTerm1      String?
+  frenchTerm2      String?
+  frenchTerm3      String?
+  historyTerm1     String?
+  historyTerm2     String?
+  historyTerm3     String?
+  localLangTerm1   String?
+  localLangTerm2   String?
+  localLangTerm3   String?
+  nvsTerm1         String?
+  nvsTerm2         String?
+  nvsTerm3         String?
+  pvsTerm1         String?
+  pvsTerm2         String?
+  pvsTerm3         String?
+  technologyTerm1  String?
+  technologyTerm2  String?
+  technologyTerm3  String?
   schoolId         String
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

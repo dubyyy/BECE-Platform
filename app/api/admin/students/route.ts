@@ -315,6 +315,51 @@ export async function GET(request: NextRequest) {
         religiousTerm2: student.religiousTerm2,
         religiousTerm3: student.religiousTerm3,
         
+        // Arabic scores
+        arabicTerm1: student.arabicTerm1,
+        arabicTerm2: student.arabicTerm2,
+        arabicTerm3: student.arabicTerm3,
+        
+        // Business Studies scores
+        businessTerm1: student.businessTerm1,
+        businessTerm2: student.businessTerm2,
+        businessTerm3: student.businessTerm3,
+        
+        // CCA scores
+        ccaTerm1: student.ccaTerm1,
+        ccaTerm2: student.ccaTerm2,
+        ccaTerm3: student.ccaTerm3,
+        
+        // French scores
+        frenchTerm1: student.frenchTerm1,
+        frenchTerm2: student.frenchTerm2,
+        frenchTerm3: student.frenchTerm3,
+        
+        // History scores
+        historyTerm1: student.historyTerm1,
+        historyTerm2: student.historyTerm2,
+        historyTerm3: student.historyTerm3,
+        
+        // Local Language scores
+        localLangTerm1: student.localLangTerm1,
+        localLangTerm2: student.localLangTerm2,
+        localLangTerm3: student.localLangTerm3,
+        
+        // NVS scores
+        nvsTerm1: student.nvsTerm1,
+        nvsTerm2: student.nvsTerm2,
+        nvsTerm3: student.nvsTerm3,
+        
+        // PVS scores
+        pvsTerm1: student.pvsTerm1,
+        pvsTerm2: student.pvsTerm2,
+        pvsTerm3: student.pvsTerm3,
+        
+        // Technology scores
+        technologyTerm1: student.technologyTerm1,
+        technologyTerm2: student.technologyTerm2,
+        technologyTerm3: student.technologyTerm3,
+        
         // Dynamic subjects
         caScores: student.caScores,
         studentSubjects: student.studentSubjects,

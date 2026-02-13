@@ -1,14 +1,10 @@
-// Hybrid cache: Redis for production scalability, in-memory fallback
-// Supports 6,000+ concurrent users when Redis is configured
-
-import { redisGet, redisSet, redisDel, isRedisConnected } from './redis';
+// In-memory cache with TTL support
 
 interface CacheEntry<T> {
   data: T;
   expiresAt: number;
 }
 
-// In-memory fallback cache
 class InMemoryCache {
   private store: Map<string, CacheEntry<unknown>>;
   private cleanupInterval: NodeJS.Timeout | null;
@@ -25,6 +21,18 @@ class InMemoryCache {
         this.store.delete(key);
       }
     }
+  }
+
+  async setAsync<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): Promise<void> {
+    this.set(key, data, ttlMs);
+  }
+
+  async getAsync<T>(key: string): Promise<T | null> {
+    return this.get<T>(key);
+  }
+
+  async deleteAsync(key: string): Promise<void> {
+    this.delete(key);
   }
 
   set<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): void {
@@ -74,105 +82,10 @@ class InMemoryCache {
   }
 }
 
-// Hybrid cache that uses Redis when available
-class HybridCache {
-  private fallback: InMemoryCache;
-
-  constructor() {
-    this.fallback = new InMemoryCache();
-  }
-
-  // Async set - uses Redis when available
-  async setAsync<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): Promise<void> {
-    // Always set in fallback for immediate access
-    this.fallback.set(key, data, ttlMs);
-
-    // Also set in Redis if available
-    if (isRedisConnected()) {
-      try {
-        const ttlSeconds = Math.ceil(ttlMs / 1000);
-        await redisSet(`cache:${key}`, JSON.stringify(data), ttlSeconds);
-      } catch (error) {
-        console.warn('[Cache] Redis set error:', error);
-      }
-    }
-  }
-
-  // Async get - tries Redis first, falls back to in-memory
-  async getAsync<T>(key: string): Promise<T | null> {
-    // Try Redis first for distributed caching
-    if (isRedisConnected()) {
-      try {
-        const redisData = await redisGet(`cache:${key}`);
-        if (redisData) {
-          const parsed = JSON.parse(redisData) as T;
-          // Update local cache for faster subsequent access
-          this.fallback.set(key, parsed);
-          return parsed;
-        }
-      } catch (error) {
-        console.warn('[Cache] Redis get error:', error);
-      }
-    }
-
-    // Fallback to in-memory
-    return this.fallback.get<T>(key);
-  }
-
-  // Async delete
-  async deleteAsync(key: string): Promise<void> {
-    this.fallback.delete(key);
-    if (isRedisConnected()) {
-      try {
-        await redisDel(`cache:${key}`);
-      } catch (error) {
-        console.warn('[Cache] Redis delete error:', error);
-      }
-    }
-  }
-
-  // Sync methods for backwards compatibility (in-memory only)
-  set<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): void {
-    this.fallback.set(key, data, ttlMs);
-    // Fire and forget Redis set
-    if (isRedisConnected()) {
-      const ttlSeconds = Math.ceil(ttlMs / 1000);
-      redisSet(`cache:${key}`, JSON.stringify(data), ttlSeconds).catch(() => {});
-    }
-  }
-
-  get<T>(key: string): T | null {
-    return this.fallback.get<T>(key);
-  }
-
-  delete(key: string): void {
-    this.fallback.delete(key);
-    if (isRedisConnected()) {
-      redisDel(`cache:${key}`).catch(() => {});
-    }
-  }
-
-  clear(): void {
-    this.fallback.clear();
-  }
-
-  has(key: string): boolean {
-    return this.fallback.has(key);
-  }
-
-  getStats(): { size: number; keys: string[] } {
-    return this.fallback.getStats();
-  }
-
-  destroy() {
-    this.fallback.destroy();
-  }
-}
-
 // Global singleton instance
-const globalForCache = global as unknown as { cache: HybridCache };
+const globalForCache = global as unknown as { cache: InMemoryCache };
 
-export const cache = globalForCache.cache || new HybridCache();
+export const cache = globalForCache.cache || new InMemoryCache();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForCache.cache = cache;

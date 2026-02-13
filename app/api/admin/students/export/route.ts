@@ -105,6 +105,7 @@ export async function GET(request: NextRequest) {
       "First Name",
       "Gender",
       "ARBY1", "ARBY2", "ARBY3",
+      "BSTY1", "BSTY2", "BSTY3",
       "BUSY1", "BUSY2", "BUSY3",
       "CCAY1", "CCAY2", "CCAY3",
       "ENGY1", "ENGY2", "ENGY3",
@@ -128,7 +129,6 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function studentToCsvRow(student: any): string {
       rowCounter++;
-      const ca = student.caScores as Record<string, { term1?: string; term2?: string; term3?: string }> | null;
 
       const religiousTypeCode = student.religiousType?.toLowerCase() === "christian" ? "1"
         : student.religiousType?.toLowerCase() === "islam" ? "2" : "";
@@ -145,18 +145,19 @@ export async function GET(request: NextRequest) {
         student.othername || "",
         student.firstname || "",
         student.gender || "",
-        ca?.ARB?.term1 || "", ca?.ARB?.term2 || "", ca?.ARB?.term3 || "",
-        ca?.BUS?.term1 || "", ca?.BUS?.term2 || "", ca?.BUS?.term3 || "",
-        ca?.CCA?.term1 || "", ca?.CCA?.term2 || "", ca?.CCA?.term3 || "",
-        student.englishTerm1 || ca?.ENG?.term1 || "", student.englishTerm2 || ca?.ENG?.term2 || "", student.englishTerm3 || ca?.ENG?.term3 || "",
-        ca?.FRE?.term1 || "", ca?.FRE?.term2 || "", ca?.FRE?.term3 || "",
-        ca?.HST?.term1 || "", ca?.HST?.term2 || "", ca?.HST?.term3 || "",
-        ca?.LLG?.term1 || "", ca?.LLG?.term2 || "", ca?.LLG?.term3 || "",
-        student.arithmeticTerm1 || ca?.MTH?.term1 || "", student.arithmeticTerm2 || ca?.MTH?.term2 || "", student.arithmeticTerm3 || ca?.MTH?.term3 || "",
-        ca?.NVS?.term1 || "", ca?.NVS?.term2 || "", ca?.NVS?.term3 || "",
-        student.generalTerm1 || ca?.PVS?.term1 || "", student.generalTerm2 || ca?.PVS?.term2 || "", student.generalTerm3 || ca?.PVS?.term3 || "",
-        student.religiousTerm1 || ca?.RGS?.term1 || "", student.religiousTerm2 || ca?.RGS?.term2 || "", student.religiousTerm3 || ca?.RGS?.term3 || "",
-        ca?.TEC?.term1 || "", ca?.TEC?.term2 || "", ca?.TEC?.term3 || "",
+        student.arabicTerm1 || "", student.arabicTerm2 || "", student.arabicTerm3 || "",
+        student.generalTerm1 || "", student.generalTerm2 || "", student.generalTerm3 || "",
+        student.businessTerm1 || "", student.businessTerm2 || "", student.businessTerm3 || "",
+        student.ccaTerm1 || "", student.ccaTerm2 || "", student.ccaTerm3 || "",
+        student.englishTerm1 || "", student.englishTerm2 || "", student.englishTerm3 || "",
+        student.frenchTerm1 || "", student.frenchTerm2 || "", student.frenchTerm3 || "",
+        student.historyTerm1 || "", student.historyTerm2 || "", student.historyTerm3 || "",
+        student.localLangTerm1 || "", student.localLangTerm2 || "", student.localLangTerm3 || "",
+        student.arithmeticTerm1 || "", student.arithmeticTerm2 || "", student.arithmeticTerm3 || "",
+        student.nvsTerm1 || "", student.nvsTerm2 || "", student.nvsTerm3 || "",
+        student.pvsTerm1 || "", student.pvsTerm2 || "", student.pvsTerm3 || "",
+        student.religiousTerm1 || "", student.religiousTerm2 || "", student.religiousTerm3 || "",
+        student.technologyTerm1 || "", student.technologyTerm2 || "", student.technologyTerm3 || "",
         religiousTypeCode,
         schoolTypeCode,
         student.school.schoolCode || "",

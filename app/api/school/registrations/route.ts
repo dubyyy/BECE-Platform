@@ -124,6 +124,51 @@ export async function PATCH(req: NextRequest) {
         data.religiousTerm2 = update.caScores.RGS.year2 || '-';
         data.religiousTerm3 = update.caScores.RGS.year3 || '-';
       }
+      if (update.caScores.ARB) {
+        data.arabicTerm1 = update.caScores.ARB.year1 || '-';
+        data.arabicTerm2 = update.caScores.ARB.year2 || '-';
+        data.arabicTerm3 = update.caScores.ARB.year3 || '-';
+      }
+      if (update.caScores.BUS) {
+        data.businessTerm1 = update.caScores.BUS.year1 || '-';
+        data.businessTerm2 = update.caScores.BUS.year2 || '-';
+        data.businessTerm3 = update.caScores.BUS.year3 || '-';
+      }
+      if (update.caScores.CCA) {
+        data.ccaTerm1 = update.caScores.CCA.year1 || '-';
+        data.ccaTerm2 = update.caScores.CCA.year2 || '-';
+        data.ccaTerm3 = update.caScores.CCA.year3 || '-';
+      }
+      if (update.caScores.FRE) {
+        data.frenchTerm1 = update.caScores.FRE.year1 || '-';
+        data.frenchTerm2 = update.caScores.FRE.year2 || '-';
+        data.frenchTerm3 = update.caScores.FRE.year3 || '-';
+      }
+      if (update.caScores.HST) {
+        data.historyTerm1 = update.caScores.HST.year1 || '-';
+        data.historyTerm2 = update.caScores.HST.year2 || '-';
+        data.historyTerm3 = update.caScores.HST.year3 || '-';
+      }
+      if (update.caScores.LLG) {
+        data.localLangTerm1 = update.caScores.LLG.year1 || '-';
+        data.localLangTerm2 = update.caScores.LLG.year2 || '-';
+        data.localLangTerm3 = update.caScores.LLG.year3 || '-';
+      }
+      if (update.caScores.NVS) {
+        data.nvsTerm1 = update.caScores.NVS.year1 || '-';
+        data.nvsTerm2 = update.caScores.NVS.year2 || '-';
+        data.nvsTerm3 = update.caScores.NVS.year3 || '-';
+      }
+      if (update.caScores.PVS) {
+        data.pvsTerm1 = update.caScores.PVS.year1 || '-';
+        data.pvsTerm2 = update.caScores.PVS.year2 || '-';
+        data.pvsTerm3 = update.caScores.PVS.year3 || '-';
+      }
+      if (update.caScores.TEC) {
+        data.technologyTerm1 = update.caScores.TEC.year1 || '-';
+        data.technologyTerm2 = update.caScores.TEC.year2 || '-';
+        data.technologyTerm3 = update.caScores.TEC.year3 || '-';
+      }
     }
     if (Array.isArray(update.studentSubjects)) {
       data.studentSubjects = update.studentSubjects;
@@ -438,6 +483,33 @@ export async function POST(req: NextRequest) {
       religiousTerm1: reg.caScores?.RGS?.year1 || reg.religious?.year1 || reg.religious?.term1 || '-',
       religiousTerm2: reg.caScores?.RGS?.year2 || reg.religious?.year2 || reg.religious?.term2 || '-',
       religiousTerm3: reg.caScores?.RGS?.year3 || reg.religious?.year3 || reg.religious?.term3 || '-',
+      arabicTerm1: reg.caScores?.ARB?.year1 || '-',
+      arabicTerm2: reg.caScores?.ARB?.year2 || '-',
+      arabicTerm3: reg.caScores?.ARB?.year3 || '-',
+      businessTerm1: reg.caScores?.BUS?.year1 || '-',
+      businessTerm2: reg.caScores?.BUS?.year2 || '-',
+      businessTerm3: reg.caScores?.BUS?.year3 || '-',
+      ccaTerm1: reg.caScores?.CCA?.year1 || '-',
+      ccaTerm2: reg.caScores?.CCA?.year2 || '-',
+      ccaTerm3: reg.caScores?.CCA?.year3 || '-',
+      frenchTerm1: reg.caScores?.FRE?.year1 || '-',
+      frenchTerm2: reg.caScores?.FRE?.year2 || '-',
+      frenchTerm3: reg.caScores?.FRE?.year3 || '-',
+      historyTerm1: reg.caScores?.HST?.year1 || '-',
+      historyTerm2: reg.caScores?.HST?.year2 || '-',
+      historyTerm3: reg.caScores?.HST?.year3 || '-',
+      localLangTerm1: reg.caScores?.LLG?.year1 || '-',
+      localLangTerm2: reg.caScores?.LLG?.year2 || '-',
+      localLangTerm3: reg.caScores?.LLG?.year3 || '-',
+      nvsTerm1: reg.caScores?.NVS?.year1 || '-',
+      nvsTerm2: reg.caScores?.NVS?.year2 || '-',
+      nvsTerm3: reg.caScores?.NVS?.year3 || '-',
+      pvsTerm1: reg.caScores?.PVS?.year1 || '-',
+      pvsTerm2: reg.caScores?.PVS?.year2 || '-',
+      pvsTerm3: reg.caScores?.PVS?.year3 || '-',
+      technologyTerm1: reg.caScores?.TEC?.year1 || '-',
+      technologyTerm2: reg.caScores?.TEC?.year2 || '-',
+      technologyTerm3: reg.caScores?.TEC?.year3 || '-',
       lateRegistration: reg.isLateRegistration || false,
       year: reg.year || '2025/2026',
       prcd: reg.prcd || 1,
