@@ -355,11 +355,6 @@ export async function GET(request: NextRequest) {
         pvsTerm2: student.pvsTerm2,
         pvsTerm3: student.pvsTerm3,
         
-        // Technology scores
-        technologyTerm1: student.technologyTerm1,
-        technologyTerm2: student.technologyTerm2,
-        technologyTerm3: student.technologyTerm3,
-        
         // Dynamic subjects
         caScores: student.caScores,
         studentSubjects: student.studentSubjects,

@@ -164,11 +164,6 @@ export async function PATCH(req: NextRequest) {
         data.pvsTerm2 = update.caScores.PVS.year2 || '-';
         data.pvsTerm3 = update.caScores.PVS.year3 || '-';
       }
-      if (update.caScores.TEC) {
-        data.technologyTerm1 = update.caScores.TEC.year1 || '-';
-        data.technologyTerm2 = update.caScores.TEC.year2 || '-';
-        data.technologyTerm3 = update.caScores.TEC.year3 || '-';
-      }
     }
     if (Array.isArray(update.studentSubjects)) {
       data.studentSubjects = update.studentSubjects;
@@ -507,9 +502,6 @@ export async function POST(req: NextRequest) {
       pvsTerm1: reg.caScores?.PVS?.year1 || '-',
       pvsTerm2: reg.caScores?.PVS?.year2 || '-',
       pvsTerm3: reg.caScores?.PVS?.year3 || '-',
-      technologyTerm1: reg.caScores?.TEC?.year1 || '-',
-      technologyTerm2: reg.caScores?.TEC?.year2 || '-',
-      technologyTerm3: reg.caScores?.TEC?.year3 || '-',
       lateRegistration: reg.isLateRegistration || false,
       year: reg.year || '2025/2026',
       prcd: reg.prcd || 1,

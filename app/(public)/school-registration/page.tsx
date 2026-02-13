@@ -116,7 +116,6 @@ const SUBJECTS = [
   { code: "NVS", name: "National Values" },
   { code: "PVS", name: "Pre Vocational Studies" },
   { code: "BUS", name: "Business Studies" },
-  { code: "TEC", name: "Technology" },
 ];
 
 const SchoolRegistration = () => {

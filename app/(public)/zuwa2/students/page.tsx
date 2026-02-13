@@ -86,11 +86,6 @@ interface Student {
   pvsTerm2: string | null;
   pvsTerm3: string | null;
   
-  // Technology scores
-  technologyTerm1: string | null;
-  technologyTerm2: string | null;
-  technologyTerm3: string | null;
-  
   // Dynamic subjects
   caScores: Record<string, { year1?: string; year2?: string; year3?: string; term1?: string; term2?: string; term3?: string }> | null;
   studentSubjects: string[];
@@ -409,7 +404,6 @@ export default function Students() {
                       <TableHead colSpan={3} className="text-center border-l-2">NVS</TableHead>
                       <TableHead colSpan={3} className="text-center border-l-2">PVS</TableHead>
                       <TableHead colSpan={4} className="text-center border-l-2">Religious Studies</TableHead>
-                      <TableHead colSpan={3} className="text-center border-l-2">Technology</TableHead>
                     </TableRow>
                     <TableRow>
                       <TableHead className="border-r"></TableHead>
@@ -470,10 +464,6 @@ export default function Students() {
                       {/* Religious Studies */}
                       <TableHead className="text-center text-xs border-l-2">Type</TableHead>
                       <TableHead className="text-center text-xs">T1</TableHead>
-                      <TableHead className="text-center text-xs">T2</TableHead>
-                      <TableHead className="text-center text-xs">T3</TableHead>
-                      {/* Technology */}
-                      <TableHead className="text-center text-xs border-l-2">T1</TableHead>
                       <TableHead className="text-center text-xs">T2</TableHead>
                       <TableHead className="text-center text-xs">T3</TableHead>
                     </TableRow>
@@ -578,11 +568,6 @@ export default function Students() {
                           <TableCell className="text-center">{student.religiousTerm1 || student.caScores?.RGS?.year1 || "-"}</TableCell>
                           <TableCell className="text-center">{student.religiousTerm2 || student.caScores?.RGS?.year2 || "-"}</TableCell>
                           <TableCell className="text-center">{student.religiousTerm3 || student.caScores?.RGS?.year3 || "-"}</TableCell>
-                          
-                          {/* Technology scores */}
-                          <TableCell className="text-center border-l-2">{student.technologyTerm1 || student.caScores?.TEC?.year1 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.technologyTerm2 || student.caScores?.TEC?.year2 || "-"}</TableCell>
-                          <TableCell className="text-center">{student.technologyTerm3 || student.caScores?.TEC?.year3 || "-"}</TableCell>
                         </TableRow>
                       );
                     })}
