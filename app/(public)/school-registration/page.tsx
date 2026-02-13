@@ -1681,7 +1681,7 @@ const SchoolRegistration = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium">{reg.lastname} {reg.othername} {reg.firstname}</div>
+                              <div className="font-medium">{reg.lastname}, {reg.firstname}{reg.othername ? ' ' + reg.othername : ''}</div>
                             </TableCell>
                             <TableCell>
                               <span className="capitalize">{reg.gender}</span>

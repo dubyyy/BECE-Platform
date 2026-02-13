@@ -1749,7 +1749,7 @@ const Validation = () => {
                         }
                         if (!searchQuery) return true;
                         const query = searchQuery.toLowerCase();
-                        const fullName = `${student.lastname} ${student.othername} ${student.firstname}`.toLowerCase();
+                        const fullName = `${student.lastname}, ${student.firstname}${student.othername ? ' ' + student.othername : ''}`.toLowerCase();
                         return (
                           student.studentNumber.toLowerCase().includes(query) ||
                           fullName.includes(query) ||
@@ -1846,7 +1846,7 @@ const Validation = () => {
                                 {student.passport ? (
                                   <img 
                                     src={student.passport} 
-                                    alt={`${student.lastname} ${student.othername} ${student.firstname}`}
+                                    alt={`${student.lastname}, ${student.firstname}${student.othername ? ' ' + student.othername : ''}`}
                                     className="w-12 h-12 object-cover rounded-md border border-gray-300"
                                   />
                                 ) : (
@@ -1860,7 +1860,7 @@ const Validation = () => {
                               </TableCell>
                               <TableCell className="font-medium">{student.studentNumber}</TableCell>
                               <TableCell>
-                                {student.lastname} {student.othername} {student.firstname}
+                                {student.lastname}, {student.firstname}{student.othername ? ' ' + student.othername : ''}
                               </TableCell>
                               <TableCell className="text-xs">
                                 {student.dateOfBirth ? isoToDdmmyyyy(student.dateOfBirth) : 'N/A'}
@@ -1972,7 +1972,7 @@ const Validation = () => {
                   <div className="flex justify-center">
                     <img 
                       src={editFormData.passport} 
-                      alt={`${editFormData.lastname} ${editFormData.othername} ${editFormData.firstname}`}
+                      alt={`${editFormData.lastname}, ${editFormData.firstname}${editFormData.othername ? ' ' + editFormData.othername : ''}`}
                       className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
                     />
                   </div>
