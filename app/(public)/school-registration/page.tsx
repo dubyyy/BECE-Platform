@@ -1243,7 +1243,7 @@ const SchoolRegistration = () => {
                   e.currentTarget.reset();
                 }}>
                 <div className="space-y-2">
-                  <Label htmlFor="lastname">Lastname/Surname</Label>
+                  <Label htmlFor="lastname">Surname</Label>
                   <Input
                     id="lastname"
                     name="lastname"

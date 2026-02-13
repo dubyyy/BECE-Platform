@@ -20,16 +20,9 @@ export default function middleware(req: NextRequest) {
     );
   }
 
-  if (pathname === "/zuwa2") {
-    return NextResponse.next();
-  }
-
-  const url = req.nextUrl.clone();
-  url.pathname = "/zuwa2";
-  url.searchParams.set("next", pathname);
-  return NextResponse.redirect(url);
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/zuwa2/:path*", "/api/admin/:path*"]
+  matcher: ["/api/admin/:path*"]
 };

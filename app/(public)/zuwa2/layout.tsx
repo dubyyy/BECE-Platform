@@ -11,30 +11,27 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isVerified, setIsVerified] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Check if already verified
     async function checkVerification() {
       try {
-        const response = await fetch("/api/admin/verify-password");
-        const data = await response.json();
-        setIsVerified(data.verified);
-      } catch (error) {
-        console.error("Failed to check verification:", error);
+        const res = await fetch("/api/admin/verify-password");
+        const data = await res.json();
+        setIsVerified(data.verified === true);
+      } catch {
         setIsVerified(false);
       } finally {
-        setIsChecking(false);
+        setChecking(false);
       }
     }
-
     checkVerification();
   }, []);
 
-  if (isChecking) {
+  if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">Verifying access...</p>
       </div>
     );
   }
