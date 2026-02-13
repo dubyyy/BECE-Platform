@@ -10,6 +10,19 @@ interface JwtPayload {
   schoolName: string;
 }
 
+// Safely parse a date string, handling DD/MM/YYYY, ISO, and invalid values
+function safeParseDateOfBirth(value: string | undefined | null): Date | null {
+  if (!value) return null;
+  // Handle DD/MM/YYYY format
+  const ddmmyyyy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const d = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -77,7 +90,7 @@ export async function PATCH(
     if (typeof updateData.passport === 'string' || updateData.passport === null) data.passport = updateData.passport;
 
     if (typeof updateData.dateOfBirth === 'string') {
-      data.dateOfBirth = updateData.dateOfBirth ? new Date(updateData.dateOfBirth) : null;
+      data.dateOfBirth = safeParseDateOfBirth(updateData.dateOfBirth);
     } else if (updateData.dateOfBirth === null) {
       data.dateOfBirth = null;
     }

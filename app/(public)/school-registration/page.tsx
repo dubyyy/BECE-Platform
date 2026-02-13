@@ -528,7 +528,7 @@ const SchoolRegistration = () => {
     }, 300);
   };
 
-  const saveRegistrationsToServer = async (toSave: Registration[]) => {
+  const saveRegistrationsToServer = async (toSave: Registration[], override: boolean = false) => {
     setIsSaving(true);
     setSaveMessage(null);
     try {
@@ -543,13 +543,13 @@ const SchoolRegistration = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ registrations: toSave }),
+        body: JSON.stringify({ registrations: toSave, override }),
       });
       const data = await response.json();
       if (!response.ok) {
         const msg: string = data?.error || '';
         // If duplicate student number error, recompute and override
-        if (response.status === 400 && msg.toLowerCase().includes('already exist')) {
+        if (!override && response.status === 400 && msg.toLowerCase().includes('already exist')) {
           try {
             const resGet = await fetch('/api/school/registrations', {
               method: 'GET',
@@ -742,16 +742,23 @@ const SchoolRegistration = () => {
       await loadRegistrationsFromServer();
     } else {
       // Normal registration: Recompute all student numbers alphabetically
-      const withNew = [...registrations, newRegistration];
+      // Exclude post-registrations from recompute (they live in a separate table)
+      const regularRegs = registrations.filter(r => !r.isPostRegistration);
+      const postRegs = registrations.filter(r => r.isPostRegistration);
+      const withNew = [...regularRegs, newRegistration];
       const recomputed = recomputeStudentNumbers(lgaCode, schoolCode, withNew);
-      setRegistrations(recomputed);
+      setRegistrations([...recomputed, ...postRegs]);
       
-      // Save only the newly added registration with its final studentNumber
-      const savedNew = recomputed.find(r => r.id === newRegistration.id);
-      if (savedNew) {
-        await saveRegistrationsToServer([savedNew]);
-        await loadRegistrationsFromServer();
-      }
+      // Save ALL recomputed registrations with override to avoid student number collisions
+      // Convert DD/MM/YYYY dates back to ISO format for the server
+      const toSave = recomputed.map(r => ({
+        ...r,
+        dateOfBirth: r.dateOfBirth && r.dateOfBirth.includes('/')
+          ? ddmmyyyyToIso(r.dateOfBirth)
+          : r.dateOfBirth,
+      }));
+      await saveRegistrationsToServer(toSave, true);
+      await loadRegistrationsFromServer();
     }
     
     setStudentCounter(studentCounter + 1);
@@ -1240,7 +1247,6 @@ const SchoolRegistration = () => {
 
                   // No duplicate found, proceed with registration
                   await processRegistration(newRegistration);
-                  e.currentTarget.reset();
                 }}>
                 <div className="space-y-2">
                   <Label htmlFor="lastname">Surname</Label>

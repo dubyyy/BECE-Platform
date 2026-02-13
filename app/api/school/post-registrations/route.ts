@@ -12,6 +12,19 @@ interface JwtPayload {
   schoolName: string;
 }
 
+// Safely parse a date string, handling DD/MM/YYYY, ISO, and invalid values
+function safeParseDateOfBirth(value: string | undefined | null): Date | null {
+  if (!value) return null;
+  // Handle DD/MM/YYYY format
+  const ddmmyyyy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const d = new Date(`${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // Validate CA score is between 1-100 or empty
 function isValidCAScore(score: string | undefined | null): boolean {
   if (!score || score === '' || score === '-') return true;
@@ -85,7 +98,7 @@ export async function PATCH(req: NextRequest) {
     if (typeof update.gender === 'string') data.gender = update.gender;
     if (typeof update.schoolType === 'string') data.schoolType = update.schoolType;
     if (typeof update.passport === 'string' || update.passport === null) data.passport = update.passport;
-    if (typeof update.dateOfBirth === 'string') data.dateOfBirth = update.dateOfBirth ? new Date(update.dateOfBirth) : null;
+    if (typeof update.dateOfBirth === 'string') data.dateOfBirth = safeParseDateOfBirth(update.dateOfBirth);
     
     // Handle dynamic CA scores and student subjects
     if (update.caScores && typeof update.caScores === 'object') {
@@ -435,7 +448,7 @@ export async function POST(req: NextRequest) {
         firstname: reg.firstname,
         othername: reg.othername || '',
         lastname: reg.lastname,
-        dateOfBirth: reg.dateOfBirth ? new Date(reg.dateOfBirth) : null,
+        dateOfBirth: safeParseDateOfBirth(reg.dateOfBirth),
         gender: reg.gender,
         schoolType: reg.schoolType,
         passport: reg.passport,
