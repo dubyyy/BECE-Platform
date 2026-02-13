@@ -21,47 +21,47 @@ import { Button } from "./ui/button";
 const navItems = [
   {
     title: "Dashboard",
-    href: "/admin",
+    href: "/zuwa2",
     icon: LayoutDashboard,
   },
   {
     title: "Students",
-    href: "/admin/students",
+    href: "/zuwa2/students",
     icon: Users,
   },
   {
     title: "Schools",
-    href: "/admin/schools",
+    href: "/zuwa2/schools",
     icon: School,
   },
   {
     title: "Management Console",
-    href: "/admin/manage",
+    href: "/zuwa2/manage",
     icon: Wrench,
   },
   {
     title: "Access PINs",
-    href: "/admin/access-pins",
+    href: "/zuwa2/access-pins",
     icon: Key,
   },
   {
     title: "Add Result",
-    href: "/admin/add-result",
+    href: "/zuwa2/add-result",
     icon: ClipboardList,
   },
   {
     title: "Data.json Manager",
-    href: "/admin/data-json",
+    href: "/zuwa2/data-json",
     icon: FileJson,
   },
   {
     title: "Reset Password",
-    href: "/admin/reset-password",
+    href: "/zuwa2/reset-password",
     icon: KeyRound,
   },
   {
     title: "Settings",
-    href: "/admin/settings",
+    href: "/zuwa2/settings",
     icon: Settings,
   },
 ];
@@ -110,7 +110,7 @@ export function AppSidebar() {
               fetch("/api/admin/logout", { method: "POST" })
                 .catch(() => {})
                 .finally(() => {
-                  window.location.href = "/admin";
+                  window.location.href = "/zuwa2";
                 });
             }}
           >
