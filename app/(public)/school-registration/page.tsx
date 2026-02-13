@@ -1255,6 +1255,19 @@ const SchoolRegistration = () => {
                   />
                 </div>
 
+                 <div className="space-y-2">
+                  <Label htmlFor="firstname">First Name</Label>
+                  <Input
+                    id="firstname"
+                    name="firstname"
+                    placeholder="Enter first name"
+                    type="text"
+                    required
+                    value={firstname}
+                    onChange={(e) => setFirstname(e.target.value)}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="othername">Other Name</Label>
                   <Input
@@ -1267,18 +1280,7 @@ const SchoolRegistration = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="firstname">First Name</Label>
-                  <Input
-                    id="firstname"
-                    name="firstname"
-                    placeholder="Enter first name"
-                    type="text"
-                    required
-                    value={firstname}
-                    onChange={(e) => setFirstname(e.target.value)}
-                  />
-                </div>
+               
 
                 <div className="space-y-2">
                   <Label htmlFor="dateOfBirth">Date of Birth (DD/MM/YYYY)</Label>
