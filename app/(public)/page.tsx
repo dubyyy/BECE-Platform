@@ -3,16 +3,24 @@ import PublicHeader from "./components/PublicHeader";
 import {
   School,
   FileText,
+  Users,
 } from "lucide-react";
 
 
 const Index = () => {
   const publicServices = [
     {
-      title: "Check BECE Result",
-      description: "Access and verify official Basic Education Certificate Examination results and certificates",
+      title: "Check Primary Result",
+      description: "Access and verify official primary school examination results and certificates",
       icon: FileText,
       href: "/primary-result",
+      variant: "primary" as const,
+    },
+    {
+      title: "CIE Student Inspector",
+      description: "Browse and manage student records by Local Government Area",
+      icon: Users,
+      href: "/cie",
       variant: "primary" as const,
     },
    
@@ -52,7 +60,7 @@ const Index = () => {
                   <h3 className="text-xs xl:text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 xl:mb-6">
                     Available Services
                   </h3>
-                  <div className="grid grid-cols-1 lg:flex gap-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {publicServices.map((service, index) => (
                       <ServiceCard key={index} {...service} />
                     ))}
@@ -71,7 +79,7 @@ const Index = () => {
                     Notice
                   </h4>
                   <p className="text-sm xl:text-base text-foreground leading-relaxed">
-                    For comprehensive basic and secondary education portal services, 
+                    For comprehensive primary education portal services, 
                     visit the official ministry website at{" "}
                     <a
                       href="https://www.dsgmope.ng"
@@ -90,9 +98,9 @@ const Index = () => {
                     Information
                   </h4>
                   <p className="text-sm xl:text-base text-muted-foreground leading-relaxed">
-                    This portal provides official services for the verification of Basic Education Certificate Examination (BECE) 
-                    results and access to school administrative functions. All data is 
-                    sourced directly from the Ministry of secondary education records.
+                    This portal provides official services for the verification of primary education 
+                    examination results and access to school administrative functions. All data is 
+                    sourced directly from the Ministry of Primary Education records.
                   </p>
                 </div>
 
