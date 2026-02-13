@@ -1834,19 +1834,11 @@ const SchoolRegistration = () => {
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-lastname">Lastname/Surname</Label>
+                  <Label htmlFor="edit-lastname">Surname</Label>
                   <Input
                     id="edit-lastname"
                     value={editModalData.lastname}
                     onChange={(e) => setEditModalData({...editModalData, lastname: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-othername">Other Name</Label>
-                  <Input
-                    id="edit-othername"
-                    value={editModalData.othername}
-                    onChange={(e) => setEditModalData({...editModalData, othername: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
@@ -1855,6 +1847,14 @@ const SchoolRegistration = () => {
                     id="edit-firstname"
                     value={editModalData.firstname}
                     onChange={(e) => setEditModalData({...editModalData, firstname: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-othername">Other Name</Label>
+                  <Input
+                    id="edit-othername"
+                    value={editModalData.othername}
+                    onChange={(e) => setEditModalData({...editModalData, othername: e.target.value})}
                   />
                 </div>
               </div>

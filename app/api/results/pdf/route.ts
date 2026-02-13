@@ -341,10 +341,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Candidate Name and Sex (same line)
-    const candidateName = [result.fName, result.mName, result.lName]
-      .filter(Boolean)
-      .join(' ')
-      .toUpperCase();
+    const candidateName = result.lName
+      ? `${result.lName.toUpperCase()}, ${[result.fName, result.mName].filter(Boolean).join(' ').toUpperCase()}`
+      : [result.fName, result.mName].filter(Boolean).join(' ').toUpperCase();
     
     const textStartX = hasPassport && passportImage ? infoBoxX + passportWidth + 18 : infoBoxX + 8;
     let infoY = infoBoxTopY - infoPad - 12;

@@ -666,7 +666,7 @@ const Validation = () => {
         });
 
         // Full name
-        const fullName = `${student.lastname.toUpperCase()} ${(student.othername || "").toUpperCase()} ${student.firstname.toUpperCase()}`;
+        const fullName = `${student.lastname.toUpperCase()}, ${student.firstname.toUpperCase()}${student.othername ? ' ' + student.othername.toUpperCase() : ''}`;
         
         // Row text
         page.drawText(`${index + 1}`, {
@@ -899,7 +899,7 @@ const Validation = () => {
           page.drawText(text, { x: x + xOffset, y, size, font: timesRomanFont });
         };
         
-        const fullName = `${student.lastname.toUpperCase()} ${(student.othername || "").toUpperCase()} ${student.firstname.toUpperCase()}`;
+        const fullName = `${student.lastname.toUpperCase()}, ${student.firstname.toUpperCase()}${student.othername ? ' ' + student.othername.toUpperCase() : ''}`;
         const caScores = student.caScores || {};
         
         let dataX = margin;
@@ -1095,7 +1095,7 @@ const Validation = () => {
         }
         
         // Draw student information below photo
-        const fullName = `${student.lastname.toUpperCase()} ${(student.othername || "").toUpperCase()} ${student.firstname.toUpperCase()}`;
+        const fullName = `${student.lastname.toUpperCase()}, ${student.firstname.toUpperCase()}${student.othername ? ' ' + student.othername.toUpperCase() : ''}`;
         const nameY = photoY - 15;
         
         // Truncate name if too long
@@ -1302,7 +1302,7 @@ const Validation = () => {
         });
 
         // Full name
-        const fullName = `${student.lastname.toUpperCase()} ${(student.othername || "").toUpperCase()} ${student.firstname.toUpperCase()}`;
+        const fullName = `${student.lastname.toUpperCase()}, ${student.firstname.toUpperCase()}${student.othername ? ' ' + student.othername.toUpperCase() : ''}`;
         
         // Row text
         page.drawText(`${index + 1}`, {
@@ -2006,6 +2006,15 @@ const Validation = () => {
                 <h3 className="font-semibold text-lg">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label htmlFor="edit-lastname">Surname</Label>
+                    <Input
+                      id="edit-lastname"
+                      value={editFormData.lastname}
+                      onChange={(e) => handleEditFormChange('lastname', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="edit-firstname">First Name</Label>
                     <Input
                       id="edit-firstname"
@@ -2020,15 +2029,6 @@ const Validation = () => {
                       id="edit-othername"
                       value={editFormData.othername}
                       onChange={(e) => handleEditFormChange('othername', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-lastname">Last Name</Label>
-                    <Input
-                      id="edit-lastname"
-                      value={editFormData.lastname}
-                      onChange={(e) => handleEditFormChange('lastname', e.target.value)}
-                      required
                     />
                   </div>
                   <div className="space-y-2">
