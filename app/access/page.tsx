@@ -161,13 +161,13 @@ export default function AccessPage() {
                 {/* Access PIN Field */}
                 <div className="space-y-1.5">
                   <Label htmlFor="access_pin" className="text-sm font-medium">
-                    Access PIN <span className="text-destructive">*</span>
+                    Password <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
                     <Input
                       id="access_pin"
                       type={showPin ? "text" : "password"}
-                      placeholder="Enter access PIN"
+                      placeholder="Enter password"
                       value={formData.accessPin}
                       onChange={(e) =>
                         setFormData({ ...formData, accessPin: e.target.value })

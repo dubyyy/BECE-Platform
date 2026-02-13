@@ -243,9 +243,40 @@ const Validation = () => {
     fetchRegistrations();
   }, [isLoggedIn]);
 
+  // Helper: format date input as DD/MM/YYYY with auto-slashes
+  const handleDateInput = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  };
+
+  // Convert DD/MM/YYYY to YYYY-MM-DD for API
+  const ddmmyyyyToIso = (val: string): string => {
+    const parts = val.split('/');
+    if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return val;
+  };
+
+  // Convert ISO date string to DD/MM/YYYY for display
+  const isoToDdmmyyyy = (val: string): string => {
+    if (!val) return '';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
   const handleEdit = (student: Registration) => {
     setEditingStudent(student);
-    setEditFormData({ ...student });
+    setEditFormData({
+      ...student,
+      dateOfBirth: student.dateOfBirth ? isoToDdmmyyyy(student.dateOfBirth) : '',
+    });
     setEditModalSubjects(student.studentSubjects || []);
     setEditModalCaScores(student.caScores || {});
     setIsEditModalOpen(true);
@@ -361,7 +392,7 @@ const Validation = () => {
         firstname: editFormData.firstname,
         othername: editFormData.othername,
         lastname: editFormData.lastname,
-        dateOfBirth: editFormData.dateOfBirth,
+        dateOfBirth: editFormData.dateOfBirth ? ddmmyyyyToIso(editFormData.dateOfBirth) : editFormData.dateOfBirth,
         gender: editFormData.gender,
         schoolType: editFormData.schoolType,
         passport: editFormData.passport,
@@ -465,8 +496,8 @@ const Validation = () => {
     currentY -= 25;
 
     // Line 3: Examination title
-    const currentYear = new Date().getFullYear();
-    const nextYear = currentYear + 1;
+    const currentYear = 2025;
+    const nextYear = 2026;
     const examTitle = `${currentYear}/${nextYear} Basic Education Certificate Examination`;
     centerText(examTitle, 11, currentY, boldFont);
     
@@ -1832,7 +1863,7 @@ const Validation = () => {
                                 {student.lastname} {student.othername} {student.firstname}
                               </TableCell>
                               <TableCell className="text-xs">
-                                {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : 'N/A'}
+                                {student.dateOfBirth ? isoToDdmmyyyy(student.dateOfBirth) : 'N/A'}
                               </TableCell>
                               <TableCell className="capitalize">{student.gender}</TableCell>
                               <TableCell className="capitalize">{student.schoolType}</TableCell>
@@ -2001,12 +2032,14 @@ const Validation = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
+                    <Label htmlFor="edit-dateOfBirth">Date of Birth (DD/MM/YYYY)</Label>
                     <Input
                       id="edit-dateOfBirth"
-                      type="date"
+                      type="text"
+                      placeholder="DD/MM/YYYY"
+                      maxLength={10}
                       value={editFormData.dateOfBirth || ''}
-                      onChange={(e) => handleEditFormChange('dateOfBirth', e.target.value)}
+                      onChange={(e) => handleEditFormChange('dateOfBirth', handleDateInput(e.target.value))}
                     />
                   </div>
                   <div className="space-y-2">

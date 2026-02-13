@@ -121,146 +121,21 @@ export default function Students() {
   }, [fetchStudents]);
 
   function exportAsCSV() {
-    if (safeStudents.length === 0) {
-      toast.error("No data to export");
-      return;
+    try {
+      toast.info("Preparing export — download will start shortly...", { duration: 3000 });
+
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      if (selectedLGA && selectedLGA !== "all") params.append("lga", selectedLGA);
+      if (schoolCodeInput) params.append("schoolCode", schoolCodeInput);
+      if (registrationType && registrationType !== "all") params.append("registrationType", registrationType);
+
+      // Open the streaming CSV endpoint — browser downloads the file directly
+      window.open(`/api/admin/students/export?${params.toString()}`, "_blank");
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to export data");
     }
-
-    // Create CSV content with header and student data
-    const headers = [
-      "S/N",
-      "school_session",
-      "progID",
-      "Reg. No",
-      "ACCESSCODE",
-      "Surename",
-      "Other Name(s)",
-      "First Name",
-      "Gender",
-      "ARBY1",
-      "ARBY2",
-      "ARBY3",
-      "BUSY1",
-      "BUSY2",
-      "BUSY3",
-      "CCAY1",
-      "CCAY2",
-      "CCAY3",
-      "ENGY1",
-      "ENGY2",
-      "ENGY3",
-      "FREY1",
-      "FREY2",
-      "FREY3",
-      "HSTY1",
-      "HSTY2",
-      "HSTY3",
-      "LLGY1",
-      "LLGY2",
-      "LLGY3",
-      "MTHY1",
-      "MTHY2",
-      "MTHY3",
-      "NVSY1",
-      "NVSY2",
-      "NVSY3",
-      "PVSY1",
-      "PVSY2",
-      "PVSY3",
-      "RGSY1",
-      "RGSY2",
-      "RGSY3",
-      "TECY1",
-      "TECY2",
-      "TECY3",
-      "rgsType",
-      "schType",
-      "schcode",
-      "lgacode",
-      "DATE OF BIRTH"
-    ];
-    const csvRows = [headers.join(",")];
-
-    safeStudents.forEach((student, index) => {
-      // Map religious type to numeric values (1 = Christian, 2 = Islam)
-      const religiousTypeCode = student.religiousType?.toLowerCase() === "christian" ? "1" 
-        : student.religiousType?.toLowerCase() === "islam" ? "2" 
-        : "";
-      
-      // Map school type to numeric values (0 = Public, 1 = Private)
-      const schoolTypeCode = student.schoolType?.toLowerCase() === "private" ? "1" : "0";
-      
-      const row = [
-        index + 1, // S/N
-        student.year || "", // school_session
-        2, // progID
-        student.studentNumber, // Reg. No
-        student.accCode, // ACCESSCODE
-        student.lastname, // Surename
-        student.othername || "", // Other Name(s)
-        student.firstname, // First Name
-        student.gender, // Gender
-        student.caScores?.ARB?.term1 || "", // ARBY1
-        student.caScores?.ARB?.term2 || "", // ARBY2
-        student.caScores?.ARB?.term3 || "", // ARBY3
-        student.caScores?.BUS?.term1 || "", // BUSY1
-        student.caScores?.BUS?.term2 || "", // BUSY2
-        student.caScores?.BUS?.term3 || "", // BUSY3
-        student.caScores?.CCA?.term1 || "", // CCAY1
-        student.caScores?.CCA?.term2 || "", // CCAY2
-        student.caScores?.CCA?.term3 || "", // CCAY3
-        student.englishTerm1 || student.caScores?.ENG?.term1 || "", // ENGY1
-        student.englishTerm2 || student.caScores?.ENG?.term2 || "", // ENGY2
-        student.englishTerm3 || student.caScores?.ENG?.term3 || "", // ENGY3
-        student.caScores?.FRE?.term1 || "", // FREY1
-        student.caScores?.FRE?.term2 || "", // FREY2
-        student.caScores?.FRE?.term3 || "", // FREY3
-        student.caScores?.HST?.term1 || "", // HSTY1
-        student.caScores?.HST?.term2 || "", // HSTY2
-        student.caScores?.HST?.term3 || "", // HSTY3
-        student.caScores?.LLG?.term1 || "", // LLGY1
-        student.caScores?.LLG?.term2 || "", // LLGY2
-        student.caScores?.LLG?.term3 || "", // LLGY3
-        student.arithmeticTerm1 || student.caScores?.MTH?.term1 || "", // MTHY1
-        student.arithmeticTerm2 || student.caScores?.MTH?.term2 || "", // MTHY2
-        student.arithmeticTerm3 || student.caScores?.MTH?.term3 || "", // MTHY3
-        student.caScores?.NVS?.term1 || "", // NVSY1
-        student.caScores?.NVS?.term2 || "", // NVSY2
-        student.caScores?.NVS?.term3 || "", // NVSY3
-        student.generalTerm1 || student.caScores?.PVS?.term1 || "", // PVSY1
-        student.generalTerm2 || student.caScores?.PVS?.term2 || "", // PVSY2
-        student.generalTerm3 || student.caScores?.PVS?.term3 || "", // PVSY3
-        student.religiousTerm1 || student.caScores?.RGS?.term1 || "", // RGSY1
-        student.religiousTerm2 || student.caScores?.RGS?.term2 || "", // RGSY2
-        student.religiousTerm3 || student.caScores?.RGS?.term3 || "", // RGSY3
-        student.caScores?.TEC?.term1 || "", // TECY1
-        student.caScores?.TEC?.term2 || "", // TECY2
-        student.caScores?.TEC?.term3 || "", // TECY3
-        religiousTypeCode, // rgsType
-        schoolTypeCode, // schType (0 = Public, 1 = Private)
-        student.schoolCode || "", // schcode
-        student.lCode || "", // lgacode
-        student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("en-GB") : "" // DATE OF BIRTH
-      ];
-      csvRows.push(row.join(","));
-    });
-
-    const csvContent = csvRows.join("\n");
-    
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `students_export_${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success(`Exported ${safeStudents.length} students to CSV successfully`);
   }
 
   async function downloadAllImages() {

@@ -126,6 +126,10 @@ export async function GET(request: NextRequest) {
     
     let allStudents: StudentRow[] = [];
     let totalCount = 0;
+
+    // When querying all types, we need to fetch enough from each table
+    // to correctly paginate the combined + sorted result
+    const allTypeLimit = skip + limit;
     
     // Query regular students (not late) if needed
     if (shouldQueryRegular) {
@@ -150,7 +154,7 @@ export async function GET(request: NextRequest) {
             createdAt: "desc",
           },
           skip: registrationType === "regular" ? skip : 0,
-          take: registrationType === "regular" ? limit : undefined,
+          take: registrationType === "regular" ? limit : allTypeLimit,
         }),
         prisma.studentRegistration.count({ where: regularWhere }),
       ]);
@@ -182,7 +186,7 @@ export async function GET(request: NextRequest) {
             createdAt: "desc",
           },
           skip: registrationType === "late" ? skip : 0,
-          take: registrationType === "late" ? limit : undefined,
+          take: registrationType === "late" ? limit : allTypeLimit,
         }),
         prisma.studentRegistration.count({ where: lateWhere }),
       ]);
@@ -209,7 +213,7 @@ export async function GET(request: NextRequest) {
             createdAt: "desc",
           },
           skip: registrationType === "post" ? skip : 0,
-          take: registrationType === "post" ? limit : undefined,
+          take: registrationType === "post" ? limit : allTypeLimit,
         }),
         prisma.postRegistration.count({ where: postWhere }),
       ]);
@@ -218,8 +222,8 @@ export async function GET(request: NextRequest) {
       totalCount += postCount;
     }
     
-    // Sort combined results by creation date
-    allStudents.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    // Sort combined results by creation date (handle both Date objects and strings)
+    allStudents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     // Apply pagination if querying multiple types
     if (registrationType === "all" || !registrationType) {
@@ -342,9 +346,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching students:", error);
+    console.error("Error fetching students:", error instanceof Error ? error.message : error);
+    console.error("Stack:", error instanceof Error ? error.stack : "no stack");
     return NextResponse.json(
-      { error: "Failed to fetch students" },
+      { error: "Failed to fetch students", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

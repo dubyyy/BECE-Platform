@@ -304,7 +304,7 @@ const SchoolRegistration = () => {
         lastname: r.lastname,
         othername: r.othername || '',
         firstname: r.firstname,
-        dateOfBirth: r.dateOfBirth ? new Date(r.dateOfBirth).toISOString().split('T')[0] : '',
+        dateOfBirth: r.dateOfBirth ? isoToDdmmyyyy(new Date(r.dateOfBirth).toISOString().split('T')[0]) : '',
         gender: r.gender,
         schoolType: r.schoolType,
         passport: r.passport || null,
@@ -335,7 +335,7 @@ const SchoolRegistration = () => {
             lastname: r.lastname,
             othername: r.othername || '',
             firstname: r.firstname,
-            dateOfBirth: r.dateOfBirth ? new Date(r.dateOfBirth).toISOString().split('T')[0] : '',
+            dateOfBirth: r.dateOfBirth ? isoToDdmmyyyy(new Date(r.dateOfBirth).toISOString().split('T')[0]) : '',
             gender: r.gender,
             schoolType: r.schoolType,
             passport: r.passport || null,
@@ -451,8 +451,8 @@ const SchoolRegistration = () => {
     const schoolData = schools.find((s) => s.lCode === lgaCode && s.schCode === schoolCode);
     const actualLgaCode = schoolData?.lgaCode || '1';
     
-    const currentYear = new Date().getFullYear();
-    const nextYear = currentYear + 1;
+    const currentYear = 2025;
+    const nextYear = 2026;
     const headerLine1 = 'MINISTRY OF SECONDARY EDUCATION';
     const headerLine2 = `LGA: ${actualLgaCode} :: ${lgaName || 'ANIOCHA-NORTH'} SCHOOL CODE: ${schoolCode || '1'} : ${school}`;
     const headerLine3 = `${currentYear}/${nextYear} BASIC EDUCATION CERTIFICATE EXAMINATION (BECE)`;
@@ -503,7 +503,7 @@ const SchoolRegistration = () => {
                 <th>REG NO.</th>
                 <th>EXAM NO.</th>
                 <th>LNAME</th>
-                <th>MNAME</th>
+                <th>ONAME</th>
                 <th>FNAME</th>
                 <th>SEX</th>
               </tr>
@@ -562,7 +562,7 @@ const SchoolRegistration = () => {
               lastname: r.lastname,
               othername: r.othername || '',
               firstname: r.firstname,
-              dateOfBirth: r.dateOfBirth ? new Date(r.dateOfBirth).toISOString().split('T')[0] : '',
+              dateOfBirth: r.dateOfBirth ? isoToDdmmyyyy(new Date(r.dateOfBirth).toISOString().split('T')[0]) : '',
               gender: r.gender,
               schoolType: r.schoolType,
               passport: r.passport || null,
@@ -611,7 +611,7 @@ const SchoolRegistration = () => {
     }
   };
 
-  // Generate student number: xfffNNNN format where NNNN is alphabetical rank of unique surnames
+  // Generate student number: xfffNNNN format where NNNN is sequential alphabetical rank
   const generateStudentNumber = (
     lgaCode: string,
     schoolCode: string,
@@ -626,27 +626,16 @@ const SchoolRegistration = () => {
 
     if (!school) return '';
 
-    const normalize = (s: string) => s.trim().toUpperCase();
-    const target = normalize(surname);
-
-    // Build a set of unique, normalized surnames including the new one
-    const uniqueSurnames = Array.from(
-      new Set([
-        ...currentRegs.map((r) => normalize(r.lastname)),
-        target,
-      ])
-    ).sort((a, b) => a.localeCompare(b));
-
-    const rank = Math.max(0, uniqueSurnames.indexOf(target)) + 1; // 1-based
-
     const x = school.lgaCode; // 1-2 digits
     const fff = school.schCode.padStart(3, '0'); // 3 digits (padded)
-    const nnnn = rank.toString().padStart(4, '0'); // 4 digits from surname rank
+    // For a single student number, just use total count + 1 as placeholder
+    // The actual number will be recomputed by recomputeStudentNumbers
+    const nnnn = (currentRegs.length + 1).toString().padStart(4, '0');
 
     return `${x}${fff}${nnnn}`;
   };
 
-  // Recompute student numbers for all registrations based on current alphabetical rank of unique surnames
+  // Recompute student numbers for all registrations based on alphabetical rank and count per surname
   const recomputeStudentNumbers = (
     lga: string,
     sch: string,
@@ -655,15 +644,30 @@ const SchoolRegistration = () => {
     const schools = schoolsData as SchoolData[];
     const school = schools.find((s) => s.lCode === lga && s.schCode === sch);
     if (!school) return regs;
+
     const normalize = (s: string) => s.trim().toUpperCase();
-    const uniqueSurnames = Array.from(new Set(regs.map((r) => normalize(r.lastname)))).sort((a, b) => a.localeCompare(b));
+
+    // Sort registrations by surname, then by first name
+    const sortedRegs = [...regs].sort((a, b) => {
+      const surnameCompare = normalize(a.lastname).localeCompare(normalize(b.lastname));
+      if (surnameCompare !== 0) return surnameCompare;
+      // If surnames are the same, sort by first name
+      return normalize(a.firstname).localeCompare(normalize(b.firstname));
+    });
+
     const x = school.lgaCode;
     const fff = school.schCode.toString().padStart(3, '0');
-    const rankOf = (surname: string) => (uniqueSurnames.indexOf(normalize(surname)) + 1).toString().padStart(4, '0');
-    return regs.map((r) => ({
-      ...r,
-      studentNumber: `${x}${fff}${rankOf(r.lastname)}`,
-    }));
+
+    return sortedRegs.map((r, index) => {
+      // Use sequential numbering based on overall alphabetical order
+      const uniqueNumber = index + 1;
+      const nnnn = uniqueNumber.toString().padStart(4, '0');
+
+      return {
+        ...r,
+        studentNumber: `${x}${fff}${nnnn}`,
+      };
+    });
   };
 
   // Generate incremental student number for late registrations
@@ -766,6 +770,33 @@ const SchoolRegistration = () => {
     setCaScores({});
   };
 
+  // Helper: format date input as DD/MM/YYYY with auto-slashes
+  const handleDateInput = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+  };
+
+  // Convert DD/MM/YYYY to YYYY-MM-DD for API
+  const ddmmyyyyToIso = (val: string): string => {
+    const parts = val.split('/');
+    if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return val;
+  };
+
+  // Convert YYYY-MM-DD to DD/MM/YYYY for display
+  const isoToDdmmyyyy = (val: string): string => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return val;
+  };
+
   // Helper function to limit score input to 2 digits
   const handleScoreInput = (e: React.FormEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
@@ -836,7 +867,7 @@ const SchoolRegistration = () => {
         firstname: editModalData.firstname,
         othername: editModalData.othername,
         lastname: editModalData.lastname,
-        dateOfBirth: editModalData.dateOfBirth,
+        dateOfBirth: editModalData.dateOfBirth ? ddmmyyyyToIso(editModalData.dateOfBirth) : editModalData.dateOfBirth,
         gender: editModalData.gender,
         schoolType: editModalData.schoolType,
         passport: editModalImage,
@@ -1158,9 +1189,7 @@ const SchoolRegistration = () => {
                   // Ensure all required fields are filled before allowing submission
                   const isFormComplete =
                     lastname.trim() !== "" &&
-                    othername.trim() !== "" &&
                     firstname.trim() !== "" &&
-                    dateOfBirth.trim() !== "" &&
                     gender !== "" &&
                     schoolType !== "" &&
                     hasReligiousType &&
@@ -1178,7 +1207,7 @@ const SchoolRegistration = () => {
                     lastname: formData.get('lastname') as string,
                     othername: formData.get('othername') as string,
                     firstname: formData.get('firstname') as string,
-                    dateOfBirth: dateOfBirth,
+                    dateOfBirth: ddmmyyyyToIso(dateOfBirth),
                     gender: gender,
                     schoolType: schoolType,
                     passport: selectedImage,
@@ -1227,13 +1256,12 @@ const SchoolRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="othername">Other Name/Middlename</Label>
+                  <Label htmlFor="othername">Other Name</Label>
                   <Input
                     id="othername"
                     name="othername"
-                    placeholder="Enter other name or middlename"
+                    placeholder="Enter other name"
                     type="text"
-                    required
                     value={othername}
                     onChange={(e) => setOthername(e.target.value)}
                   />
@@ -1253,14 +1281,15 @@ const SchoolRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Label htmlFor="dateOfBirth">Date of Birth (DD/MM/YYYY)</Label>
                   <Input
                     id="dateOfBirth"
                     name="dateOfBirth"
-                    type="date"
-                    required
+                    type="text"
+                    placeholder="DD/MM/YYYY"
+                    maxLength={10}
                     value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    onChange={(e) => setDateOfBirth(handleDateInput(e.target.value))}
                   />
                 </div>
 
@@ -1478,7 +1507,6 @@ const SchoolRegistration = () => {
                   className="w-full"
                   disabled={
                     lastname.trim() === "" ||
-                    othername.trim() === "" ||
                     firstname.trim() === "" ||
                     gender === "" ||
                     schoolType === "" ||
@@ -1825,12 +1853,14 @@ const SchoolRegistration = () => {
 
               {/* Date of Birth */}
               <div className="space-y-2">
-                <Label htmlFor="edit-dob">Date of Birth</Label>
+                <Label htmlFor="edit-dob">Date of Birth (DD/MM/YYYY)</Label>
                 <Input
                   id="edit-dob"
-                  type="date"
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  maxLength={10}
                   value={editModalData.dateOfBirth || ''}
-                  onChange={(e) => setEditModalData({...editModalData, dateOfBirth: e.target.value})}
+                  onChange={(e) => setEditModalData({...editModalData, dateOfBirth: handleDateInput(e.target.value)})}
                 />
               </div>
 

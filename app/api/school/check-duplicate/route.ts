@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (const student of students as StudentToCheck[]) {
-      // Check in StudentRegistration
+      const normalizeStr = (s: string) => s.trim().toLowerCase();
+
+      // Check in StudentRegistration for EXACT duplicates only (same firstname, lastname, AND othername)
       const existingStudent = await prisma.studentRegistration.findFirst({
         where: {
           schoolId: decoded.schoolId,
@@ -74,7 +76,10 @@ export async function POST(req: NextRequest) {
           othername: student.othername ? {
             equals: student.othername,
             mode: 'insensitive',
-          } : undefined,
+          } : {
+            equals: '',
+            mode: 'insensitive',
+          },
         },
         select: {
           firstname: true,
@@ -92,7 +97,7 @@ export async function POST(req: NextRequest) {
           studentNumber: existingStudent.studentNumber,
         });
       } else {
-        // Also check in PostRegistration table
+        // Also check in PostRegistration table for EXACT duplicates only
         const existingPostStudent = await prisma.postRegistration.findFirst({
           where: {
             schoolId: decoded.schoolId,
@@ -107,7 +112,10 @@ export async function POST(req: NextRequest) {
             othername: student.othername ? {
               equals: student.othername,
               mode: 'insensitive',
-            } : undefined,
+            } : {
+              equals: '',
+              mode: 'insensitive',
+            },
           },
           select: {
             firstname: true,

@@ -53,7 +53,7 @@ export function drawPDFHeader(
   currentY -= 25;
 
   // Line 3: Examination title
-  const currentYear = data.year || new Date().getFullYear().toString();
+  const currentYear = data.year || '2025';
   const nextYear = (parseInt(currentYear) + 1).toString();
   const examTitle = `${currentYear}/${nextYear} Basic Education Certificate Examination`;
   centerText(examTitle, 11, currentY, boldFont);
