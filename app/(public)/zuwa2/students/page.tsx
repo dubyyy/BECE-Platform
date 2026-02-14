@@ -161,132 +161,69 @@ export default function Students() {
   }, [fetchStudents]);
 
   const [exporting, setExporting] = useState(false);
-  const [exportProgress, setExportProgress] = useState("");
+  const [exportProgress, setExportProgress] = useState<number | null>(null);
 
   async function exportAsCSV() {
     if (exporting) return;
     setExporting(true);
-    setExportProgress("Starting export...");
+    setExportProgress(0);
 
     try {
-      const baseParams = new URLSearchParams();
-      if (searchTerm) baseParams.append("search", searchTerm);
-      if (selectedLGA && selectedLGA !== "all") baseParams.append("lga", selectedLGA);
-      if (schoolCodeInput) baseParams.append("schoolCode", schoolCodeInput);
-      if (registrationType && registrationType !== "all") baseParams.append("registrationType", registrationType);
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      if (selectedLGA && selectedLGA !== "all") params.append("lga", selectedLGA);
+      if (schoolCodeInput) params.append("schoolCode", schoolCodeInput);
+      if (registrationType && registrationType !== "all") params.append("registrationType", registrationType);
 
-      // Step 1: Get counts for each table
-      const countParams = new URLSearchParams(baseParams);
-      countParams.append("countOnly", "true");
-      const countRes = await fetch(`/api/admin/students/export-chunk?${countParams.toString()}`);
-      if (!countRes.ok) throw new Error("Failed to get record counts");
-      const countData = await countRes.json();
-      const { totalCount, tables } = countData as {
-        totalCount: number;
-        tables: { table: string; count: number }[];
-      };
+      // Single streaming request — server sends CSV in chunks like a file download
+      const res = await fetch(`/api/admin/students/export?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.body) throw new Error("No response body");
 
-      if (totalCount === 0) {
+      const totalRecords = parseInt(res.headers.get("X-Total-Records") || "0");
+      const estimatedSize = parseInt(res.headers.get("X-Estimated-Size") || "0");
+
+      if (totalRecords === 0) {
         toast.info("No records to export");
-        setExporting(false);
-        setExportProgress("");
         return;
       }
 
-      toast.info(`Exporting ${totalCount.toLocaleString()} records...`, { duration: 5000 });
+      toast.info(`Downloading ${totalRecords.toLocaleString()} students...`, { duration: 5000 });
 
-      // CSV header
-      const CSV_HEADERS = [
-        "S/N","school_session","progID","Reg. No","ACCESSCODE",
-        "Surename","Other Name(s)","First Name","Gender",
-        "ARBY1","ARBY2","ARBY3","BSTY1","BSTY2","BSTY3",
-        "BUSY1","BUSY2","BUSY3","CCAY1","CCAY2","CCAY3",
-        "ENGY1","ENGY2","ENGY3","FREY1","FREY2","FREY3",
-        "HSTY1","HSTY2","HSTY3","LLGY1","LLGY2","LLGY3",
-        "MTHY1","MTHY2","MTHY3","NVSY1","NVSY2","NVSY3",
-        "PVSY1","PVSY2","PVSY3","RGSY1","RGSY2","RGSY3",
-        "rgsType","schType","schcode","lgacode","DATE OF BIRTH",
-      ];
+      // Read the stream chunk by chunk, tracking progress
+      const reader = res.body.getReader();
+      const chunks: BlobPart[] = [];
+      let receivedBytes = 0;
 
-      function escapeCsvField(val: string): string {
-        if (val.includes(",") || val.includes('"') || val.includes("\n")) {
-          return `"${val.replace(/"/g, '""')}"`;
-        }
-        return val;
-      }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      const csvParts: string[] = [CSV_HEADERS.map(escapeCsvField).join(",") + "\n"];
-      let totalExported = 0;
+        chunks.push(value);
+        receivedBytes += value.length;
 
-      // Step 2: For each table, fetch all chunks with retry
-      for (const { table, count: tableCount } of tables) {
-        if (tableCount === 0) continue;
-
-        let cursor: string | null = null;
-        let hasMore = true;
-
-        while (hasMore) {
-          const chunkParams = new URLSearchParams(baseParams);
-          chunkParams.append("table", table);
-          if (cursor) chunkParams.append("cursor", cursor);
-
-          let chunkData: { rows: string[][]; nextCursor: string | null; chunkSize: number; hasMore: boolean } | null = null;
-          let retries = 0;
-          const maxRetries = 5;
-
-          while (retries < maxRetries && !chunkData) {
-            try {
-              const res = await fetch(`/api/admin/students/export-chunk?${chunkParams.toString()}`);
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              chunkData = await res.json();
-            } catch (err) {
-              retries++;
-              console.warn(`Chunk fetch failed (attempt ${retries}/${maxRetries}):`, err);
-              if (retries < maxRetries) {
-                // Exponential backoff: 2s, 4s, 8s, 16s, 32s
-                const delay = Math.min(2000 * Math.pow(2, retries - 1), 32000);
-                setExportProgress(`Retrying... (attempt ${retries + 1}/${maxRetries})`);
-                await new Promise(r => setTimeout(r, delay));
-              } else {
-                throw new Error(`Failed to fetch chunk after ${maxRetries} retries. Exported ${totalExported}/${totalCount} so far.`);
-              }
-            }
-          }
-
-          if (!chunkData || !chunkData.rows) break;
-
-          // Convert rows to CSV text
-          let chunkCsv = "";
-          for (const row of chunkData.rows) {
-            totalExported++;
-            chunkCsv += [String(totalExported), ...row].map(f => escapeCsvField(f ?? "")).join(",") + "\n";
-          }
-          csvParts.push(chunkCsv);
-
-          const pct = Math.round((totalExported / totalCount) * 100);
-          setExportProgress(`Exported ${totalExported.toLocaleString()} / ${totalCount.toLocaleString()} (${pct}%)`);
-
-          cursor = chunkData.nextCursor;
-          hasMore = chunkData.hasMore;
+        // Calculate progress % from estimated size
+        if (estimatedSize > 0) {
+          const pct = Math.min(Math.round((receivedBytes / estimatedSize) * 100), 99);
+          setExportProgress(pct);
         }
       }
 
-      // Step 3: Assemble and download
-      setExportProgress("Preparing download...");
-      const blob = new Blob(csvParts, { type: "text/csv;charset=utf-8;" });
+      setExportProgress(100);
+
+      // Combine all chunks into a single blob and trigger download
+      const blob = new Blob(chunks, { type: "text/csv;charset=utf-8;" });
       saveAs(blob, `students_export_${new Date().toISOString().split("T")[0]}.csv`);
 
-      toast.success(`Successfully exported ${totalExported.toLocaleString()} records`);
-
-      if (totalExported !== totalCount) {
-        toast.warning(`Expected ${totalCount.toLocaleString()} but exported ${totalExported.toLocaleString()}. Some records may be missing.`);
-      }
+      toast.success(`Exported ${totalRecords.toLocaleString()} students successfully!`);
     } catch (error) {
       console.error("Export failed:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to export data");
+      toast.error(error instanceof Error ? error.message : "Export failed. Please check your connection and try again.");
     } finally {
-      setExporting(false);
-      setExportProgress("");
+      setTimeout(() => {
+        setExporting(false);
+        setExportProgress(null);
+      }, 2000);
     }
   }
 
@@ -467,7 +404,7 @@ export default function Students() {
                 disabled={exporting}
               >
                 <Download className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                {exporting ? "Exporting..." : "Export Data"}
+                {exportProgress !== null ? `Exporting... ${exportProgress}%` : "Export Data"}
               </Button>
               <Button 
                 variant="outline" 
@@ -480,10 +417,12 @@ export default function Students() {
                 Download Images
               </Button>
             </div>
-            {exportProgress && (
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
-                <span>{exportProgress}</span>
+            {exportProgress !== null && (
+              <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${exportProgress}%` }}
+                />
               </div>
             )}
           </div>

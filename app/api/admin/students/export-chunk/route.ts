@@ -157,15 +157,39 @@ export async function GET(request: NextRequest) {
         || "";
     }
 
+    // Only select fields needed for CSV (excludes passport, caScores, etc.)
+    const selectFields = {
+      id: true,
+      year: true,
+      studentNumber: true,
+      accCode: true,
+      firstname: true,
+      othername: true,
+      lastname: true,
+      gender: true,
+      schoolType: true,
+      dateOfBirth: true,
+      religiousType: true,
+      englishTerm1: true, englishTerm2: true, englishTerm3: true,
+      arithmeticTerm1: true, arithmeticTerm2: true, arithmeticTerm3: true,
+      generalTerm1: true, generalTerm2: true, generalTerm3: true,
+      religiousTerm1: true, religiousTerm2: true, religiousTerm3: true,
+      arabicTerm1: true, arabicTerm2: true, arabicTerm3: true,
+      businessTerm1: true, businessTerm2: true, businessTerm3: true,
+      ccaTerm1: true, ccaTerm2: true, ccaTerm3: true,
+      frenchTerm1: true, frenchTerm2: true, frenchTerm3: true,
+      historyTerm1: true, historyTerm2: true, historyTerm3: true,
+      localLangTerm1: true, localLangTerm2: true, localLangTerm3: true,
+      nvsTerm1: true, nvsTerm2: true, nvsTerm3: true,
+      pvsTerm1: true, pvsTerm2: true, pvsTerm3: true,
+      school: { select: { schoolName: true, schoolCode: true, lgaCode: true } },
+    };
+
     // Fetch a chunk using cursor-based pagination
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const queryArgs: any = {
       where,
-      include: {
-        school: {
-          select: { schoolName: true, schoolCode: true, lgaCode: true },
-        },
-      },
+      select: selectFields,
       orderBy: { createdAt: "desc" as const },
       take: CHUNK_SIZE,
     };
