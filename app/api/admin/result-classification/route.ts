@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * POST /api/admin/result-classification
  * Body: { examinationNo?: string, institutionCd?: string, lgaCd?: string, rgstype: 'IRS' | 'CRS' | null }
  */
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const body = await req.json();
     const { examinationNo, institutionCd, lgaCd, rgstype } = body;
@@ -86,12 +79,6 @@ export async function POST(req: NextRequest) {
  * Get result classification
  */
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const { searchParams } = new URL(req.url);
     const examinationNo = searchParams.get('examinationNo');

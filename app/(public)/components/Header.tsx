@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getCookie } from "@/lib/cookies";
 import Image from "next/image";
 
@@ -13,21 +13,21 @@ type SchoolInfo = {
 };
 
 const Header = () => {
-  const [schoolInfo] = useState<SchoolInfo | null>(() => {
-    if (typeof window === "undefined") return null;
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
 
+  useEffect(() => {
     const cookieInfo = getCookie("schoolInfo");
     const localInfo = localStorage.getItem("schoolInfo");
     const info = cookieInfo || localInfo;
 
-    if (!info) return null;
+    if (!info) return;
 
     try {
-      return JSON.parse(info) as SchoolInfo;
+      setSchoolInfo(JSON.parse(info) as SchoolInfo);
     } catch {
-      return null;
+      // ignore parse errors
     }
-  });
+  }, []);
 
   return (
     <header className="bg-primary text-primary-foreground sticky top-0 z-50">

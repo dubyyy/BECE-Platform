@@ -157,6 +157,8 @@ const SchoolRegistration = () => {
   const [editModalReligiousType, setEditModalReligiousType] = useState<string>("");
   const [editModalImage, setEditModalImage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [registrationToast, setRegistrationToast] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Check registration status from server
   const checkRegistrationStatus = async (schoolId: string) => {
@@ -730,57 +732,75 @@ const SchoolRegistration = () => {
     }
   };
 
+  // Auto-dismiss registration toast
+  useEffect(() => {
+    if (registrationToast) {
+      const timer = setTimeout(() => setRegistrationToast(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [registrationToast]);
+
   // Process registration after duplicate check or user confirmation
   const processRegistration = async (newRegistration: Registration) => {
-    // Handle student number assignment based on registration mode
-    // Use late registration mode if either manually enabled OR registration is closed
-    if (isLateRegistrationMode || !registrationOpen) {
-      // Late registration: Generate incremental student number from database
-      const incrementalNumber = await generateIncrementalStudentNumber(lgaCode, schoolCode);
-      newRegistration.studentNumber = incrementalNumber;
+    setIsRegistering(true);
+    setRegistrationToast(null);
+    try {
+      // Handle student number assignment based on registration mode
+      // Use late registration mode if either manually enabled OR registration is closed
+      if (isLateRegistrationMode || !registrationOpen) {
+        // Late registration: Generate incremental student number from database
+        const incrementalNumber = await generateIncrementalStudentNumber(lgaCode, schoolCode);
+        newRegistration.studentNumber = incrementalNumber;
+        
+        // Add to registrations without recomputing
+        const withNew = [...registrations, newRegistration];
+        setRegistrations(withNew);
+        
+        // Save only the new late registration
+        await saveRegistrationsToServer([newRegistration]);
+        await loadRegistrationsFromServer();
+      } else {
+        // Normal registration: Recompute all student numbers alphabetically
+        // Exclude post-registrations from recompute (they live in a separate table)
+        const regularRegs = registrations.filter(r => !r.isPostRegistration);
+        const postRegs = registrations.filter(r => r.isPostRegistration);
+        const withNew = [...regularRegs, newRegistration];
+        const recomputed = recomputeStudentNumbers(lgaCode, schoolCode, withNew);
+        setRegistrations([...recomputed, ...postRegs]);
+        
+        // Save ALL recomputed registrations with override to avoid student number collisions
+        // Convert DD/MM/YYYY dates back to ISO format for the server
+        const toSave = recomputed.map(r => ({
+          ...r,
+          dateOfBirth: r.dateOfBirth && r.dateOfBirth.includes('/')
+            ? ddmmyyyyToIso(r.dateOfBirth)
+            : r.dateOfBirth,
+        }));
+        await saveRegistrationsToServer(toSave, true);
+        await loadRegistrationsFromServer();
+      }
       
-      // Add to registrations without recomputing
-      const withNew = [...registrations, newRegistration];
-      setRegistrations(withNew);
+      setStudentCounter(studentCounter + 1);
       
-      // Save only the new late registration
-      await saveRegistrationsToServer([newRegistration]);
-      await loadRegistrationsFromServer();
-    } else {
-      // Normal registration: Recompute all student numbers alphabetically
-      // Exclude post-registrations from recompute (they live in a separate table)
-      const regularRegs = registrations.filter(r => !r.isPostRegistration);
-      const postRegs = registrations.filter(r => r.isPostRegistration);
-      const withNew = [...regularRegs, newRegistration];
-      const recomputed = recomputeStudentNumbers(lgaCode, schoolCode, withNew);
-      setRegistrations([...recomputed, ...postRegs]);
-      
-      // Save ALL recomputed registrations with override to avoid student number collisions
-      // Convert DD/MM/YYYY dates back to ISO format for the server
-      const toSave = recomputed.map(r => ({
-        ...r,
-        dateOfBirth: r.dateOfBirth && r.dateOfBirth.includes('/')
-          ? ddmmyyyyToIso(r.dateOfBirth)
-          : r.dateOfBirth,
-      }));
-      await saveRegistrationsToServer(toSave, true);
-      await loadRegistrationsFromServer();
+      // Reset form fields
+      setSelectedImage(null);
+      setGender("");
+      setSchoolType("");
+      setReligiousType("");
+      setLastname("");
+      setFirstname("");
+      setOthername("");
+      setDateOfBirth("");
+      // Reset per-student subject selection and CA scores
+      setStudentSubjects([]);
+      setCaScores({});
+      setRegistrationToast({ type: 'success', text: `${newRegistration.firstname} ${newRegistration.lastname} has been registered successfully!` });
+    } catch (error) {
+      console.error('Registration error:', error);
+      setRegistrationToast({ type: 'error', text: 'An error occurred during registration. Please try again.' });
+    } finally {
+      setIsRegistering(false);
     }
-    
-    setStudentCounter(studentCounter + 1);
-    
-    // Reset form fields
-    setSelectedImage(null);
-    setGender("");
-    setSchoolType("");
-    setReligiousType("");
-    setLastname("");
-    setFirstname("");
-    setOthername("");
-    setDateOfBirth("");
-    // Reset per-student subject selection and CA scores
-    setStudentSubjects([]);
-    setCaScores({});
   };
 
   // Helper: format date input as DD/MM/YYYY with auto-slashes
@@ -1048,7 +1068,7 @@ const SchoolRegistration = () => {
       
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12 xl:px-8 2xl:px-12">
         <div className="max-w-2xl xl:max-w-3xl 2xl:max-w-4xl mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-primary hover:underline mb-6">
+          <Link href="/portal" className="inline-flex items-center gap-2 text-primary hover:underline mb-6">
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Link>
@@ -1254,6 +1274,21 @@ const SchoolRegistration = () => {
                   // No duplicate found, proceed with registration
                   await processRegistration(newRegistration);
                 }}>
+                {/* Full-screen loading overlay during registration */}
+                {isRegistering && (
+                  <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="relative">
+                        <div className="w-16 h-16 border-4 border-primary/20 rounded-full" />
+                        <div className="absolute inset-0 w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-gray-900">Registering Student...</p>
+                        <p className="text-sm text-gray-500 mt-1">Please wait while we save the registration</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="lastname">Surname</Label>
                   <Input
@@ -1520,6 +1555,7 @@ const SchoolRegistration = () => {
                   type="submit"
                   className="w-full"
                   disabled={
+                    isRegistering ||
                     lastname.trim() === "" ||
                     firstname.trim() === "" ||
                     gender === "" ||
@@ -1533,7 +1569,7 @@ const SchoolRegistration = () => {
                     })
                   }
                 >
-                  Submit Registration
+                  {isRegistering ? "Registering..." : "Submit Registration"}
                 </Button>
               </form>
               </>
@@ -2091,6 +2127,52 @@ const SchoolRegistration = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Fixed-position registration toast - visible from anywhere */}
+      {registrationToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md px-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`rounded-xl shadow-2xl border-2 overflow-hidden ${
+            registrationToast.type === 'success'
+              ? 'bg-white border-emerald-300'
+              : 'bg-white border-red-300'
+          }`}>
+            <div className={`h-1.5 w-full ${
+              registrationToast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+            }`} />
+            <div className="p-4 flex items-center gap-3">
+              <div className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-full ${
+                registrationToast.type === 'success'
+                  ? 'bg-emerald-100 text-emerald-600'
+                  : 'bg-red-100 text-red-600'
+              }`}>
+                {registrationToast.type === 'success' ? (
+                  <CheckCircle2 className="h-6 w-6" strokeWidth={2.5} />
+                ) : (
+                  <AlertCircle className="h-6 w-6" strokeWidth={2.5} />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`font-bold text-base ${
+                  registrationToast.type === 'success' ? 'text-emerald-900' : 'text-red-900'
+                }`}>
+                  {registrationToast.type === 'success' ? 'Registration Successful!' : 'Registration Failed'}
+                </p>
+                <p className={`text-sm ${
+                  registrationToast.type === 'success' ? 'text-emerald-700' : 'text-red-700'
+                }`}>
+                  {registrationToast.text}
+                </p>
+              </div>
+              <button
+                onClick={() => setRegistrationToast(null)}
+                className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

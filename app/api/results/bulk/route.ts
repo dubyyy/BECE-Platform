@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -165,12 +164,6 @@ function mapCSVRowToResult(row: CSVRow) {
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(request, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   // Check if client wants streaming progress
   const useStreaming = request.headers.get('Accept') === 'text/event-stream';
 

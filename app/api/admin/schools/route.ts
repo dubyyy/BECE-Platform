@@ -4,17 +4,10 @@ import bcrypt from "bcryptjs";
 import { getLGAName } from "@/lib/lga-mapping";
 import { generateAccessPin } from "@/lib/generate-pin";
 import { cache, CACHE_TTL } from "@/lib/cache";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const SCHOOLS_CACHE_KEY = 'admin:schools';
 
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     // Check cache first (5 minute TTL)
     const cached = cache.get(SCHOOLS_CACHE_KEY);
@@ -64,12 +57,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(request, RATE_LIMITS.ADMIN);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const body = await request.json();
     const { name, code, lga } = body;
@@ -141,12 +128,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(request, RATE_LIMITS.ADMIN);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

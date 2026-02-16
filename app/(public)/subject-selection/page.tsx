@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,19 +26,19 @@ const SUBJECTS = [
 
 export default function SubjectSelectionPage() {
   const router = useRouter();
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
+  useEffect(() => {
     const stored = sessionStorage.getItem("selectedSubjects");
-    if (!stored) return [];
+    if (!stored) return;
 
     try {
       const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? parsed : [];
+      if (Array.isArray(parsed)) setSelectedSubjects(parsed);
     } catch {
-      return [];
+      // ignore parse errors
     }
-  });
+  }, []);
   const [isNavigating, setIsNavigating] = useState(false);
 
   const handleSubjectToggle = (code: string) => {

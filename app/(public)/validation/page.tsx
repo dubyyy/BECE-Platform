@@ -1583,7 +1583,7 @@ const Validation = () => {
       
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12 xl:px-8 2xl:px-12">
         <div className="max-w-7xl xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 text-primary hover:underline mb-6">
+          <Link href="/portal" className="inline-flex items-center gap-2 text-primary hover:underline mb-6">
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Link>

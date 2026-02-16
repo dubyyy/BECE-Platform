@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { generateBatchAccCodes } from '@/lib/generate-acccode';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 interface JwtPayload {
   schoolId: string;
@@ -307,6 +306,15 @@ interface RegistrationData {
 
 export async function GET(req: NextRequest) {
   try {
+    // Verify Prisma client is initialized
+    if (!prisma) {
+      console.error('Prisma client is not initialized');
+      return NextResponse.json(
+        { error: 'Database connection error. Please try again later.' },
+        { status: 503 }
+      );
+    }
+
     // Get and verify JWT token
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -324,7 +332,8 @@ export async function GET(req: NextRequest) {
         token,
         process.env.JWT_SECRET || 'your-secret-key-change-this'
       ) as JwtPayload;
-    } catch {
+    } catch (jwtError) {
+      console.error('JWT verification error:', jwtError);
       return NextResponse.json(
         { error: 'Invalid or expired token. Please login again.' },
         { status: 401 }
@@ -332,14 +341,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch all registrations for this school
-    const registrations = await prisma.studentRegistration.findMany({
-      where: {
-        schoolId: decoded.schoolId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    let registrations;
+    try {
+      registrations = await prisma.studentRegistration.findMany({
+        where: {
+          schoolId: decoded.schoolId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      throw dbError;
+    }
 
     // Map database fields to frontend fields
     const mappedRegistrations = registrations.map((r) => ({
@@ -377,20 +392,22 @@ export async function GET(req: NextRequest) {
     );
   } catch (error) {
     console.error('Fetch registrations error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
     return NextResponse.json(
-      { error: 'Failed to fetch registrations. Please try again.' },
+      { 
+        error: 'Failed to fetch registrations. Please try again.',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
 }
 
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     // Get and verify JWT token
     const authHeader = req.headers.get('authorization');
@@ -567,8 +584,16 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error('Registration save error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
     return NextResponse.json(
-      { error: 'Failed to save registrations. Please try again.' },
+      { 
+        error: 'Failed to save registrations. Please try again.',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

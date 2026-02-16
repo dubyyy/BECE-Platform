@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cache, CACHE_TTL } from "@/lib/cache";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const STATS_CACHE_KEY = 'admin:stats';
 
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     // Check cache first (1 minute TTL for dashboard stats)
     const cached = cache.get(STATS_CACHE_KEY);

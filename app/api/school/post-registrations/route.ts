@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { generateBatchAccCodes } from '@/lib/generate-acccode';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 interface JwtPayload {
   schoolId: string;
@@ -384,12 +383,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     // Get and verify JWT token
     const authHeader = req.headers.get('authorization');

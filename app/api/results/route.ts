@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import crypto from 'crypto';
 
 const GLOBAL_RESULTS_RELEASE_KEY = '__GLOBAL_RESULTS_RELEASE__';
@@ -16,12 +15,6 @@ const timingSafeEqualString = (a: string, b: string) => {
 //          GET
 // ==========================
 export async function GET(request: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(request, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const accessPin = searchParams.get('accessPin') ?? searchParams.get('pinCode');
@@ -123,12 +116,6 @@ export async function GET(request: NextRequest) {
 //          POST
 // ==========================
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(request, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const body = await request.json();
 

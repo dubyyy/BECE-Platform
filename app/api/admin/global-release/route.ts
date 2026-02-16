@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const GLOBAL_RESULTS_RELEASE_KEY = "__GLOBAL_RESULTS_RELEASE__";
 
@@ -10,12 +9,6 @@ const GLOBAL_RESULTS_RELEASE_KEY = "__GLOBAL_RESULTS_RELEASE__";
  * Globally release or unrelease all results across all 25 LGAs
  */
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const body = await req.json();
     const { released } = body;
@@ -68,12 +61,6 @@ export async function POST(req: NextRequest) {
  * Get the current global release status (checks if any results are blocked)
  */
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const globalSetting = await prisma.accessPin.findUnique({
       where: { pin: GLOBAL_RESULTS_RELEASE_KEY },

@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * GET /api/admin/count
  * Query params: type=lga | schools-by-lga&lga=<lgaCode>
  */
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');

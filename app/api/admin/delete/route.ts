@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * DELETE /api/admin/delete
  * Body: { type: 'school' | 'student' | 'lga', schoolCode?: string, examNumber?: string, lgaCode?: string }
  */
 export async function DELETE(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const body = await req.json();
     const { type, schoolCode, examNumber, lgaCode } = body;

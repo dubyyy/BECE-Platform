@@ -2,17 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLGAName } from "@/lib/lga-mapping";
 import { cache, CACHE_TTL } from "@/lib/cache";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const LGA_STATS_CACHE_KEY = 'admin:lga-stats';
 
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     // Check cache first (5 minute TTL)
     const cached = cache.get(LGA_STATS_CACHE_KEY);

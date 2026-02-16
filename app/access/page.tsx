@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,16 @@ export default function AccessPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPin, setShowPin] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  const isChecking = typeof window === "undefined";
-  const accessToken = !isChecking ? getCookie("accessToken") : null;
+  useEffect(() => {
+    setIsMounted(true);
+    const token = getCookie("accessToken");
+    setAccessToken(token);
+  }, []);
+
+  const isChecking = !isMounted;
   const isRedirecting = Boolean(accessToken);
 
   // Check if user is already authenticated

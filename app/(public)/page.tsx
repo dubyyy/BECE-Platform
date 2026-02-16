@@ -10,7 +10,7 @@ import {
 const Index = () => {
   const publicServices = [
     {
-      title: "Check Primary Result",
+      title: "Check Secondary Result",
       description: "Access and verify official primary school examination results and certificates",
       icon: FileText,
       href: "/primary-result",

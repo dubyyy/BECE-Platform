@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2, FileText, Ban, CheckCircle2, School, MapPin, Filter, Church, Globe, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
+import { LGA_MAPPING } from "@/lib/lga-mapping";
 
 interface AdminResultsResponse {
   filters?: {
@@ -455,7 +456,7 @@ export default function ManagePage() {
                     <SelectItem value="all">All LGAs</SelectItem>
                     {lgaCodes.map((code) => (
                       <SelectItem key={code} value={code}>
-                        {code}
+                        {LGA_MAPPING[code] || code}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -578,7 +579,7 @@ export default function ManagePage() {
                   <SelectItem value="all">All LGAs</SelectItem>
                   {lgaCodes.map((code) => (
                     <SelectItem key={code} value={code}>
-                      {code}
+                      {LGA_MAPPING[code] || code}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -710,7 +711,7 @@ export default function ManagePage() {
                   <SelectItem value="all">All LGAs</SelectItem>
                   {lgaCodes.map((code) => (
                     <SelectItem key={code} value={code}>
-                      {code}
+                      {LGA_MAPPING[code] || code}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -796,7 +797,7 @@ export default function ManagePage() {
                   <SelectItem value="all">All LGAs</SelectItem>
                   {lgaCodes.map((code) => (
                     <SelectItem key={code} value={code}>
-                      {code}
+                      {LGA_MAPPING[code] || code}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -880,7 +881,7 @@ export default function ManagePage() {
                       <SelectItem value="all">All LGAs</SelectItem>
                       {lgaCodes.map((code) => (
                         <SelectItem key={code} value={code}>
-                          {code}
+                          {LGA_MAPPING[code] || code}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -903,7 +904,7 @@ export default function ManagePage() {
                     <SelectItem value="all">Select LGA</SelectItem>
                     {lgaCodes.map((code) => (
                       <SelectItem key={code} value={code}>
-                        {code}
+                        {LGA_MAPPING[code] || code}
                       </SelectItem>
                     ))}
                   </SelectContent>

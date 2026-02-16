@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
  * POST /api/admin/school-classification
  * Body: { schoolId: string, classification: 'Christian' | 'Muslim' | null }
  */
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.MUTATION);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const body = await req.json();
     const { schoolId, schoolCode, classification } = body;
@@ -85,12 +78,6 @@ export async function POST(req: NextRequest) {
  * Get school classification
  */
 export async function GET(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const { searchParams } = new URL(req.url);
     const schoolId = searchParams.get('schoolId');

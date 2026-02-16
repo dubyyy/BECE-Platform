@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getLGAName, getLGACode } from "@/lib/lga-mapping";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import schoolsData from "@/data.json";
 
 type SchoolDataJson = {
@@ -27,12 +26,6 @@ type StudentRow = (StudentWithSchool | PostWithSchool) & {
 };
 
 export async function GET(request: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(request, RATE_LIMITS.READ);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";

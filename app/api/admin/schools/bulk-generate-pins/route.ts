@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateAccessPin } from '@/lib/generate-pin';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const rateLimitCheck = checkRateLimit(req, RATE_LIMITS.ADMIN);
-  if (!rateLimitCheck.allowed) {
-    return rateLimitCheck.response!;
-  }
-
   try {
     // Find all schools without an access PIN
     const schoolsWithoutPin = await prisma.school.findMany({
